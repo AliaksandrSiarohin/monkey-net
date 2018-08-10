@@ -1,0 +1,17 @@
+data_dir: data/shapes
+batch_size: 4
+spatial_size: 64
+num_channels: 3
+
+num_kp: 4
+kp_gaussian_sigma: 2
+offline_kp: True
+block_expansion: 16
+
+lr: 1.0e-3
+
+data_load_workers: 4
+log_freq: 250
+cpk_freq: 1000
+num_iter: 100000
+
