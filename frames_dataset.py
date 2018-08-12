@@ -1,10 +1,8 @@
 import os
-import torch
 from skimage import io, img_as_float32
 from skimage.color import gray2rgb, rgb2gray
 from sklearn.model_selection import train_test_split
 from skimage.measure import label, regionprops
-from skimage.draw import circle
 
 import numpy as np
 from torch.utils.data import Dataset
@@ -17,9 +15,6 @@ class VideoToTensor(object):
     """Convert video array to Tensor."""
     def __call__(self, sample):
         sample['video_array'] = sample['video_array'].transpose((3, 0, 1, 2))
-        # sample['video_array'] = torch.from_numpy(sample['video_array'])
-        # if self.cuda:
-        #     sample['video_array'] = sample['video_array'].cuda()
         return sample
 
 
@@ -30,10 +25,9 @@ class NormalizeKP(object):
 
     def __call__(self, sample):
         if 'kp_array' in sample:
-            sample['kp_array'] /= self.spatial_size
-            # sample['kp_array'] = torch.from_numpy(sample['kp_array'])
-            # if self.cuda:
-            #     sample['kp_array'] = sample['kp_array'].cuda()
+            sample['kp_array'] /= (self.spatial_size - 1)
+            sample['kp_array'] *= 2
+            sample['kp_array'] -= 1
         return sample
 
 
@@ -103,20 +97,13 @@ class FramesDataset(Dataset):
         return out
 
 
-def draw_video(sample_dict):
-    if 'kp_array' in sample_dict:
-        video_array = np.copy(sample_dict['video_array'])
-        for i in range(len(video_array)):
-            for kp in sample_dict['kp_array'][i]:
-                rr, cc = circle(kp[0], kp[1], 3, shape=video_array.shape[1:2])
-                video_array[i][rr, cc] = (1, 1, 1)
-        return video_array
-    else:
-        return sample_dict['video_array']
-
 if __name__ == "__main__":
+    from logger import Visualizer
     actions_dataset = FramesDataset(root_dir='data/shapes', is_train=True)
 
-    sample = draw_video(actions_dataset[20])
+    video = np.array([actions_dataset[19]['video_array'], actions_dataset[20]['video_array']])
+    kp_array = np.array([actions_dataset[19]['kp_array'], actions_dataset[20]['kp_array']])
+
+    sample = Visualizer(kp_size=2).create_video_column(video)
 
     imageio.mimsave('movie1.gif', sample)

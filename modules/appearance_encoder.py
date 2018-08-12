@@ -22,4 +22,4 @@ class AppearanceEncoder(nn.Module):
         out4 = self.block4(out3)
         out5 = self.block5(out4)
 
-        return [out1, out2, out3, out4, out5]
+        return [x, out1, out2, out3, out4, out5]

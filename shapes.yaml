@@ -4,14 +4,20 @@ spatial_size: 64
 num_channels: 3
 
 num_kp: 4
-kp_gaussian_sigma: 2
+kp_gaussian_sigma: 0.1
 offline_kp: True
 block_expansion: 16
+deformation_type: "predicted"
 
 lr: 1.0e-3
 
 data_load_workers: 4
-log_freq: 250
+log_freq: 20
 cpk_freq: 1000
-num_iter: 100000
+num_iter: 1000
+
+loss_weights:
+  reconstruction: 1
+  reconstruction_deformed: 1
+  kp_movement: 1
 

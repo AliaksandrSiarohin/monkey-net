@@ -10,6 +10,8 @@ def make_coordinate_grid(spatial_size, type):
     x = torch.arange(spatial_size).type(type)
     y = torch.arange(spatial_size).type(type)
 
+    x = (2 * (x / (spatial_size - 1)) - 1)
+    y = (2 * (y / (spatial_size - 1)) - 1)
 
     yy = y.view(-1, 1).repeat(1, spatial_size)
     xx = x.repeat(spatial_size, 1)
@@ -114,7 +116,6 @@ class KP2Gaussian(nn.Module):
         # Preprocess kp shape
         shape = kp.shape[:number_of_leading_dimensions] + (1, 1, 2)
         kp = kp.view(*shape)
-        kp *= self.spatial_size
 
         # Computing gaussian
         squares = (coordinate_grid - kp) ** 2
@@ -126,7 +127,7 @@ class KP2Gaussian(nn.Module):
 
 if __name__ == "__main__":
     import imageio
-    model = KP2Gaussian(64, 2)
+    model = KP2Gaussian(64, 0.1)
 
     kp_array = np.zeros((2, 1, 64, 2), dtype='float32')
 
@@ -137,6 +138,7 @@ if __name__ == "__main__":
         kp_array[1, :, i, 0] = 1 * i / 64
         kp_array[1, :, i, 1] = 6 * i / 64
 
+    kp_array = 2 * kp_array - 1
 
     tkp = torch.from_numpy(kp_array)
 
