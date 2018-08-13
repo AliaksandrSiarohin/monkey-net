@@ -16,7 +16,7 @@ def make_coordinate_grid(spatial_size, type):
     yy = y.view(-1, 1).repeat(1, spatial_size)
     xx = x.repeat(spatial_size, 1)
 
-    meshed = torch.cat([yy.unsqueeze_(2), xx.unsqueeze_(2)], 2)
+    meshed = torch.cat([xx.unsqueeze_(2), yy.unsqueeze_(2)], 2)
 
     return meshed
 

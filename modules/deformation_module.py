@@ -11,13 +11,13 @@ class PredictedDeformation(nn.Module):
     def __init__(self, block_expansion, num_kp, num_channels, kp_gaussian_sigma, spatial_size, relative=False):
         super(PredictedDeformation, self).__init__()
 
-        self.down_block1 = DownBlock3D(num_kp + num_channels, block_expansion)
+        self.down_block1 = DownBlock3D(2 * num_kp + num_channels, block_expansion)
         self.down_block2 = DownBlock3D(block_expansion, block_expansion)
         self.down_block3 = DownBlock3D(block_expansion, block_expansion)
         self.up_block1 = UpBlock3D(block_expansion, block_expansion)
         self.up_block2 = UpBlock3D(2 * block_expansion, block_expansion)
         self.up_block3 = UpBlock3D(2 * block_expansion, block_expansion)
-        self.conv = nn.Conv3d(in_channels=block_expansion, out_channels=2, kernel_size=3, padding=1)
+        self.conv = nn.Conv3d(in_channels=block_expansion + (2 * num_kp + num_channels), out_channels=2, kernel_size=3, padding=1)
 
         self.conv.weight.data.zero_()
         self.conv.bias.data.zero_()
@@ -29,11 +29,14 @@ class PredictedDeformation(nn.Module):
 
     def create_movement_encoding(self, kp_appearance, kp_video):
         kp_video_diff = kp_video - kp_video[:, 0].unsqueeze(1)
-        kp_video = kp_video_diff + kp_appearance.unsqueeze(1)
+        kp_video = kp_video_diff + kp_appearance
 
         movement_encoding = self.kp2gaussian(kp_video)
-        appearance_kp_encoding = self.kp2gaussian(kp_appearance)
-        movement_encoding = movement_encoding - appearance_kp_encoding.unsqueeze(1)
+
+        movement_encoding_x = movement_encoding * kp_video_diff[..., 0].unsqueeze(-1).unsqueeze(-1)
+        movement_encoding_y = movement_encoding * kp_video_diff[..., 1].unsqueeze(-1).unsqueeze(-1)
+
+        movement_encoding = torch.cat([movement_encoding_x, movement_encoding_y], dim=2)
 
         return movement_encoding.permute(0, 2, 1, 3, 4)
 
@@ -49,6 +52,7 @@ class PredictedDeformation(nn.Module):
         out5 = torch.cat([out5, out1], dim=1)
 
         out6 = self.up_block3(out5)
+        out6 = torch.cat([out6, x], dim=1)
 
         out = self.conv(out6)
 
@@ -91,7 +95,7 @@ class AffineDeformation(nn.Module):
 
     def create_movement_encoding(self, kp_appearance, kp_video):
         kp_video_diff = kp_video - kp_video[:, 0].unsqueeze(1)
-        kp_video = kp_video_diff + kp_appearance.unsqueeze(1)
+        kp_video = kp_video_diff + kp_appearance
 
         kp_old = kp_video[:, 0].unsqueeze(1).repeat(1, kp_video.shape[1], 1, 1)
 

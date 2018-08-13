@@ -9,9 +9,6 @@ from modules.kp_decoder import KPDecoder
 
 from modules.util import make_coordinate_grid
 
-from skimage.transform import estimate_transform
-import numpy as np
-
 
 class DDModel(nn.Module):
     """
@@ -58,57 +55,16 @@ class DDModel(nn.Module):
 
         return deformed_inp
 
-    def forward(self, appearance_frame, motion_video, kp_appearance=None, kp_video=None):
+    def extract_kp(self, frames):
+        return None
+
+    def predict(self, appearance_frame, motion_video, kp_appearance, kp_video):
         appearance_skips = self.appearance_encoder(appearance_frame)
 
         bs, _, d, h, w = motion_video.shape
 
-        if kp_video is None:
-            # Extract keypoints
-            kp_video = None
-
-        if kp_appearance is None:
-            # Extract keypoints
-            kp_appearance = None
-
-        # kp_video_diff = kp_video - kp_video[:, 0].unsqueeze(1)
-        # kp_video = kp_video_diff + kp_appearance.unsqueeze(1)
-        # movement_encoding = self.kp2gaussian(kp_video)
-        # appearance_kp_encoding = self.kp2gaussian(kp_appearance)
-        #
-        # movement_encoding = movement_encoding - appearance_kp_encoding.unsqueeze(1)
-        #
-        # movement_encoding = movement_encoding.permute(0, 2, 1, 3, 4)
-        #
-        # appearance_encoding = appearance_frame.unsqueeze(2)
-        # appearance_encoding = appearance_encoding.repeat(1, 1, movement_encoding.shape[2], 1, 1)
-        #
-        # deformations_relative = self.deformation_module(torch.cat([movement_encoding, appearance_encoding], dim=1))
-        # deformations_relative = deformations_relative.permute(0, 2, 3, 4, 1)
-        #
-        # coordinate_grid = make_coordinate_grid(self.spatial_size, type=appearance_encoding.type())
-        # coordinate_grid = coordinate_grid.view(1, 1, h, w, 2)
-        #
-        # deformations_absolute = deformations_relative + coordinate_grid
-
-        # np_video_kp = kp_video.cpu().numpy()
-        #
-        # transforms = []
-        # for b in range(np_video_kp.shape[0]):
-        #     for dep in range(np_video_kp.shape[1]):
-        #         transforms.append(estimate_transform('affine', np_video_kp[b, dep, :, ::-1], np_video_kp[b, 0, :, ::-1]).params[:2])
-        #
-        # transforms = np.array(transforms).reshape((bs * d, 2, 3)).astype('float32')
-        #
-        # #print (transforms)
-        # transforms = torch.from_numpy(transforms).cuda(0)
-        # deformations_absolute = F.affine_grid(transforms, torch.Size((bs * d, 3, h, w)))
-
-
         deformations_absolute = self.deformation_module(appearance_frame, motion_video, kp_appearance, kp_video)
         deformations_absolute = deformations_absolute.view(bs, d, h, w, 2)
-        # index = torch.tensor([1, 0]).type(deformations_absolute.type()).long()
-        # deformations_absolute = torch.index_select(deformations_absolute, -1, index)
 
         deformed_skips = [self._deform_input(skip, deformations_absolute) for skip in appearance_skips]
         video_deformed = self._deform_input(appearance_frame, deformations_absolute)
@@ -117,3 +73,36 @@ class DDModel(nn.Module):
 
         return {"video_prediction": video_prediction, "video_deformed": video_deformed,
                 "deformation": deformations_absolute, "kp_array": kp_video}
+
+    def forward(self, inp, transfer=False):
+        if transfer:
+            return self.transfer(inp)
+        else:
+            return self.reconstruction(inp)
+
+    def reconstruction(self, inp):
+        motion_video = inp['video_array']
+        appearance_frame = inp['video_array'][:, :, 0, :, :]
+
+        if 'kp_array' in inp:
+            kp_video = inp['kp_array']
+            kp_appearance = inp['kp_array'][:, 0, :, :].unsqueeze(1)
+        else:
+            kp_video = self.extract_kp(motion_video)
+            kp_appearance = kp_video[:, 0, :, :].unsqueeze(1)
+
+        return self.predict(appearance_frame, motion_video, kp_appearance, kp_video)
+
+    def transfer(self, inp):
+        motion_video = inp['first_video_array']
+
+        appearance_frame = inp['second_video_array'][:, :, 0, :, :]
+
+        if 'first_kp_array' in inp:
+            kp_video = inp['first_kp_array']
+            kp_appearance = inp['second_kp_array'][:, 0, :, :].unsqueeze(1)
+        else:
+            kp_video = self.extract_kp(motion_video)
+            kp_appearance = self.extract_kp(appearance_frame.unsqueeze(2))
+
+        return self.predict(appearance_frame, motion_video, kp_appearance, kp_video)

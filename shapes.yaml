@@ -14,10 +14,10 @@ lr: 1.0e-3
 data_load_workers: 4
 log_freq: 20
 cpk_freq: 1000
-num_iter: 1000
+num_iter: 10000
 
 loss_weights:
-  reconstruction: 1
-  reconstruction_deformed: 1
+  reconstruction: 50
+  reconstruction_deformed: 50
   kp_movement: 1
 

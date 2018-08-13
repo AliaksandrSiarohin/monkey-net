@@ -6,7 +6,7 @@ from modules.util import UpBlock2D
 class KPDecoder(nn.Module):
     """
     Decoder for keypoints, receive list of inputs from appearance_encoder.
-    Return kp feature maps.
+    Return kp feature maps. #TODO make one block.
     """
     def __init__(self, block_expansion, num_kp):
         super(KPDecoder, self).__init__()

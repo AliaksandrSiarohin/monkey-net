@@ -62,10 +62,10 @@ class FramesDataset(Dataset):
 
             for r in regionprops(label_map):
                 min_row, min_col, max_row, max_col = r.bbox
-                kp_array[i] = [[min_row, min_col],
-                               [min_row, max_col],
-                               [max_row, max_col],
-                               [max_row, min_col]]
+                kp_array[i] = [[min_col, min_row],
+                               [max_col, min_row],
+                               [max_col, max_row],
+                               [min_col, max_row]]
 
         return kp_array
 
@@ -96,6 +96,36 @@ class FramesDataset(Dataset):
 
         return out
 
+
+class PairedDataset(Dataset):
+    """
+    Dataset of pairs.
+    """
+    def __init__(self, initial_dataset, number_of_pairs, seed = 0):
+        self.initial_dataset = initial_dataset
+
+        max_idx = min(number_of_pairs, len(initial_dataset))
+        nx, ny = max_idx, max_idx
+        xy = np.mgrid[:nx,:ny].reshape(2, -1).T
+
+        number_of_pairs = min(xy.shape[0], number_of_pairs)
+
+        np.random.seed(seed)
+
+        self.pairs = xy.take(np.random.choice(xy.shape[0], number_of_pairs, replace=False), axis=0)
+
+    def __len__(self):
+        return len(self.pairs)
+
+    def __getitem__(self, idx):
+        pair = self.pairs[idx]
+        first = self.initial_dataset[pair[0]]
+        second = self.initial_dataset[pair[1]]
+
+        first = {'first_' + key: value for key, value in first.items()}
+        second = {'second_' + key: value for key, value in second.items()}
+
+        return {**first, **second}
 
 if __name__ == "__main__":
     from logger import Visualizer

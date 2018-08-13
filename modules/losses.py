@@ -12,7 +12,7 @@ def kp_movement_loss(kp_video, deformation, weight):
 
     kp_index = h * ((kp_video.view(-1, num_kp, 2) + 1) / 2)
     kp_index = kp_index.long()
-    kp_index = kp_index[:, :, 0] * w + kp_index[:, :, 1]
+    kp_index = kp_index[:, :, 0] + kp_index[:, :, 1] * w
 
     kp_values_x = torch.gather(deformation[..., 0], dim=1, index=kp_index)
     kp_values_y = torch.gather(deformation[..., 1], dim=1, index=kp_index)
@@ -22,8 +22,8 @@ def kp_movement_loss(kp_video, deformation, weight):
 
     target = kp_video[:, 0, :, :].view(bs, 1, num_kp, 2)
 
-    y_loss = torch.mean(torch.abs(target[..., 0] - kp_values_y))
-    x_loss = torch.mean(torch.abs(target[..., 1] - kp_values_x))
+    y_loss = torch.mean(torch.abs(target[..., 1] - kp_values_y))
+    x_loss = torch.mean(torch.abs(target[..., 0] - kp_values_x))
 
     total = y_loss + x_loss
 
