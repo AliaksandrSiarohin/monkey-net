@@ -8,6 +8,7 @@ import numpy as np
 from torch.utils.data import Dataset
 import imageio
 
+from skimage.transform import estimate_transform, warp_coords
 
 class VideoToTensor(object):
     def __init__(self, cuda=True):
@@ -18,7 +19,7 @@ class VideoToTensor(object):
         return sample
 
 
-class NormalizeKP(object):
+class Normalize(object):
     def __init__(self, spatial_size, cuda=True):
         self.spatial_size = spatial_size
         self.cuda = cuda
@@ -28,13 +29,16 @@ class NormalizeKP(object):
             sample['kp_array'] /= (self.spatial_size - 1)
             sample['kp_array'] *= 2
             sample['kp_array'] -= 1
+        if 'flow_array' in sample:
+            sample['flow_array'] /= (self.spatial_size - 1)
+            sample['flow_array'] *= 2
         return sample
 
 
 class FramesDataset(Dataset):
     """Dataset of videos, represented as image of consequent frames"""
     def __init__(self, root_dir, transform=None, image_shape=(64, 64, 3), is_train=True, random_seed=0,
-                 offline_kp=True):
+                 offline_kp=True, offline_flow=True):
         """
         Args:
             root_dir (string): Path to folder with images
@@ -44,6 +48,7 @@ class FramesDataset(Dataset):
         self.transform = transform
         self.image_shape = image_shape
         self.offline_kp = offline_kp
+        self.offline_flow = offline_flow
 
         train_images, test_images = train_test_split(self.images, random_state=random_seed, test_size=0.2)
 
@@ -69,6 +74,17 @@ class FramesDataset(Dataset):
 
         return kp_array
 
+    def compute_optical_flow_for_shapes(self, video_array):
+        kp_array = self.compute_kp_for_shapes(video_array)
+
+        kp_array = kp_array[:, :, np.newaxis, np.newaxis, :]
+
+        flow_array = np.zeros((kp_array.shape[0], self.image_shape[0], self.image_shape[1], 2), dtype=np.float32)
+        for i in range(kp_array.shape[0]):
+            flow_array[i] = kp_array[0, 0] - kp_array[i, 0]
+
+        return flow_array
+
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir, self.images[idx])
         image = io.imread(img_name)
@@ -90,6 +106,9 @@ class FramesDataset(Dataset):
 
         if self.offline_kp:
             out['kp_array'] = self.compute_kp_for_shapes(out['video_array'])
+
+        if self.offline_flow:
+            out['flow_array'] = self.compute_optical_flow_for_shapes(video_array)
 
         if self.transform:
             out = self.transform(out)
@@ -131,9 +150,10 @@ if __name__ == "__main__":
     from logger import Visualizer
     actions_dataset = FramesDataset(root_dir='data/shapes', is_train=True)
 
-    video = np.array([actions_dataset[19]['video_array'], actions_dataset[20]['video_array']])
-    kp_array = np.array([actions_dataset[19]['kp_array'], actions_dataset[20]['kp_array']])
+    video = actions_dataset[20]['video_array']
+    flow = actions_dataset[20]['flow_array']
 
-    sample = Visualizer(kp_size=2).create_video_column(video)
+    flow = (flow / 64.0)# .astype('uint8')
 
-    imageio.mimsave('movie1.gif', sample)
+    imageio.mimsave('fl.gif', flow[..., 1])
+    #imageio.mimsave('movie.gif', video)

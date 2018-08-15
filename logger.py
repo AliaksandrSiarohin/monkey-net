@@ -97,6 +97,9 @@ class Visualizer:
 
     def draw_video_with_kp(self, video, kp_array):
         video_array = np.copy(video)
+        spatial_size = video_array.shape[1]
+        kp_array = spatial_size * (kp_array + 1) / 2
+
         for i in range(len(video_array)):
             for kp in kp_array[i]:
                 rr, cc = circle(kp[1], kp[0], self.kp_size, shape=video_array.shape[1:2])
@@ -109,6 +112,7 @@ class Visualizer:
 
     def create_video_column(self, videos):
         if self.draw_border:
+            videos = np.copy(videos)
             videos[:, :, [0, -1]] = (1, 1, 1)
             videos[:, :, :, [0, -1]] = (1, 1, 1)
         return np.concatenate(list(videos), axis=1)
@@ -124,14 +128,17 @@ class Visualizer:
 
     def visualize_transfer(self, inp, out):
         out_video_batch = out['video_prediction'].data.cpu().numpy()
+        appearance_deformed_batch = out['video_deformed'].data.cpu().numpy()
         motion_video_batch = inp['first_video_array'].data.cpu().numpy()
         appearance_video_batch = inp['second_video_array'].data.cpu().numpy()
 
         out_video_batch = np.transpose(out_video_batch, [0, 2, 3, 4, 1])
         motion_video_batch = np.transpose(motion_video_batch, [0, 2, 3, 4, 1])
         appearance_video_batch = np.transpose(appearance_video_batch, [0, 2, 3, 4, 1])
+        appearance_deformed_batch = np.transpose(appearance_deformed_batch, [0, 2, 3, 4, 1])
 
-        image = self.create_image_grid(appearance_video_batch, motion_video_batch, out_video_batch)
+        image = self.create_image_grid(appearance_video_batch, motion_video_batch,
+                                       out_video_batch, appearance_deformed_batch)
         image = (255 * image).astype(np.uint8)
         return image
 
@@ -139,6 +146,7 @@ class Visualizer:
         out_video_batch = out['video_prediction'].data.cpu().numpy()
         gt_video_batch = inp['video_array'].data.cpu().numpy()
         appearance_deformed_batch = out['video_deformed'].data.cpu().numpy()
+        kp = out['kp_array'].data.cpu().numpy()
 
         out_video_batch = np.transpose(out_video_batch, [0, 2, 3, 4, 1])
         gt_video_batch = np.transpose(gt_video_batch, [0, 2, 3, 4, 1])
@@ -146,7 +154,7 @@ class Visualizer:
 
         diff_batch = gt_video_batch * 0.5 + appearance_deformed_batch * 0.5
 
-        image = self.create_image_grid(gt_video_batch, out_video_batch,
-                                                        appearance_deformed_batch, diff_batch)
+        image = self.create_image_grid((gt_video_batch, kp), out_video_batch,
+                                       appearance_deformed_batch, diff_batch)
         image = (255 * image).astype(np.uint8)
         return image

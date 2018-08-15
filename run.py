@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from frames_dataset import VideoToTensor, NormalizeKP, FramesDataset, PairedDataset
+from frames_dataset import VideoToTensor, Normalize, FramesDataset, PairedDataset
 from logger import Logger, Visualizer
 from modules.dd_model import DDModel
 from modules.losses import total_loss
@@ -101,16 +101,18 @@ if __name__ == "__main__":
                     num_channels=config['num_channels'],
                     num_kp=config['num_kp'],
                     kp_gaussian_sigma=config['kp_gaussian_sigma'],
-                    deformation_type=config['deformation_type'])
+                    deformation_type=config['deformation_type'],
+                    kp_extractor_temperature=config['kp_extractor_temperature'])
     model = torch.nn.DataParallel(module=model, device_ids=opt.device_ids)
 
     data_transform = transforms.Compose([
         VideoToTensor(),
-        NormalizeKP(config['spatial_size'])
+        Normalize(config['spatial_size'])
     ])
 
     dataset = FramesDataset(root_dir=config['data_dir'], transform=data_transform, offline_kp=config['offline_kp'],
-                            image_shape=(config['spatial_size'], config['spatial_size'], 3), is_train=(opt.mode == 'train'))
+                            offline_flow=config['offline_flow'], image_shape=(config['spatial_size'], config['spatial_size'], 3),
+                            is_train=(opt.mode == 'train'))
 
     if opt.mode == 'train':
         print ("Start model training...")

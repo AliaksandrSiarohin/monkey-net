@@ -1,11 +1,75 @@
 import torch
+import torch.nn.functional as F
+
+from modules.util import make_coordinate_grid, compute_image_gradient
 
 
 def reconstruction_loss(prediction, target, weight):
+    if weight == 0:
+        return 0
     return weight * torch.mean(torch.abs(prediction - target))
 
 
+def tv_loss(deformation, target, loss_weight, border_weight=1):
+    if loss_weight == 0:
+        return 0
+    target = target.permute(0, 2, 1, 3, 4).contiguous()
+    bs, d, c, h, w = target.shape
+    target = target.view(bs * d, c, h, w)
+
+    border = compute_image_gradient(target).abs().sum(dim=1)
+    border = torch.exp(-border_weight * border)
+
+    deformation = deformation.view(bs * d, h, w, 2)
+    grid = make_coordinate_grid(h, deformation.type())
+    grid = grid.unsqueeze(0)
+
+    deformation_relative = (deformation - grid)
+    deformation_relative = deformation_relative.permute(0, 3, 1, 2)
+
+    deformation_grad = compute_image_gradient(deformation_relative).abs().sum(dim=1)
+
+    loss = border * deformation_grad
+
+    return torch.mean(loss) * loss_weight
+
+
+def grad_reconstruction(deformation, target, weight):
+    if weight == 0:
+        return 0
+    target = target.permute(0, 2, 1, 3, 4).contiguous()
+    bs, d, c, h, w = target.shape
+
+    target_first_frame = target[:, 0, :, :, :]
+
+    grad = compute_image_gradient(target_first_frame, padding=1)
+
+    grad = grad.unsqueeze(1).repeat(1, d, 1, 1, 1).view(bs * d, 2 * c, h, w)
+    deformation = deformation.view(bs * d, h, w, 2)
+
+    deformed_grad = F.grid_sample(grad, deformation)
+
+    true_grad = compute_image_gradient(target.view(bs * d, c, h, w), padding=1)
+    return reconstruction_loss(deformed_grad, true_grad, weight)
+
+
+def flow_reconstruction(deformation, flow, weight):
+    if weight == 0 or flow is None:
+        return 0
+    bs, d, h, w, _ = deformation.shape
+
+    deformation = deformation.view(bs, d, h, w, 2)
+    grid = make_coordinate_grid(h, deformation.type())
+    grid = grid.unsqueeze(0).unsqueeze(0)
+
+    deformation_relative = (deformation - grid)
+
+    return reconstruction_loss(deformation_relative, flow, weight)
+
+
 def kp_movement_loss(kp_video, deformation, weight):
+    if weight == 0:
+        return 0
     bs, d, h, w, _ = deformation.shape
     deformation = deformation.view(-1, h * w, 2)
     bs, d, num_kp, _ = kp_video.shape
@@ -32,25 +96,37 @@ def kp_movement_loss(kp_video, deformation, weight):
 
 def total_loss(inp, out, loss_weights):
     video_gt = inp['video_array']
-    video_prediction = out['video_prediction']
-    if video_prediction.type() != video_gt.type():
-        video_gt = video_gt.type(video_prediction.type())
 
+    video_prediction = out['video_prediction']
     video_deformed = out['video_deformed']
     kp = out['kp_array']
     deformation = out['deformation']
 
-    loss_names = ["reconstruction", "reconstruction_deformed", "kp_movement"]
+    if video_prediction.type() != video_gt.type():
+        video_gt = video_gt.type(video_prediction.type())
+
+    if 'flow_array' in inp:
+        flow = inp['flow_array']
+        if flow.type() != deformation.type():
+            flow = flow.type(deformation.type())
+    else:
+        flow = None
+
+    loss_names = ["reconstruction", "reconstruction_deformed", "kp_movement", "tv", "reconstruction_grad",
+                  "flow_reconstruction"]
     loss_values = [reconstruction_loss(video_prediction, video_gt, loss_weights["reconstruction"]),
                    reconstruction_loss(video_deformed,   video_gt, loss_weights["reconstruction_deformed"]),
-                   kp_movement_loss(kp, deformation, loss_weights["kp_movement"])]
+                   kp_movement_loss(kp, deformation, loss_weights["kp_movement"]),
+                   tv_loss(deformation, video_gt, loss_weights["tv"], loss_weights['tv_border']),
+                   grad_reconstruction(deformation, video_gt, loss_weights["reconstruction_grad"]),
+                   flow_reconstruction(deformation, flow, loss_weights['reconstruction_flow'])]
 
     total = sum(loss_values)
 
     loss_values.append(total)
     loss_names.append("total")
 
-    loss_values = [value.detach().cpu().numpy() for value in loss_values]
+    loss_values = [0 if type(value) == int else value.detach().cpu().numpy() for value in loss_values]
 
     return total, zip(loss_names, loss_values)
 

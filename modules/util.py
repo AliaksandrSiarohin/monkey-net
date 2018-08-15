@@ -6,6 +6,22 @@ import torch
 import numpy as np
 
 
+def compute_image_gradient(image, padding=0):
+    bs, c, h, w = image.shape
+
+    sobel_x = torch.from_numpy(np.array([[1, 0, -1],[2,0,-2],[1,0,-1]])).type(image.type())
+    filter = sobel_x.unsqueeze(0).repeat(c, 1, 1, 1)
+    grad_x = F.conv2d(image, filter, groups=c, padding=padding)
+    grad_x = grad_x
+
+    sobel_y = torch.from_numpy(np.array([[1, 2, 1],[0,0,0],[-1,-2,-1]])).type(image.type())
+    filter = sobel_y.unsqueeze(0).repeat(c, 1, 1, 1)
+    grad_y = F.conv2d(image, filter, groups=c, padding=padding)
+    grad_y = grad_y
+
+    return torch.cat([grad_x, grad_y], dim=1)
+
+
 def make_coordinate_grid(spatial_size, type):
     x = torch.arange(spatial_size).type(type)
     y = torch.arange(spatial_size).type(type)

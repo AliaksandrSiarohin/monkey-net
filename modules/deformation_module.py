@@ -11,17 +11,16 @@ class PredictedDeformation(nn.Module):
     def __init__(self, block_expansion, num_kp, num_channels, kp_gaussian_sigma, spatial_size, relative=False):
         super(PredictedDeformation, self).__init__()
 
-        self.down_block1 = DownBlock3D(2 * num_kp + num_channels, block_expansion)
+        self.down_block1 = DownBlock3D(2 * num_kp, block_expansion)
         self.down_block2 = DownBlock3D(block_expansion, block_expansion)
         self.down_block3 = DownBlock3D(block_expansion, block_expansion)
         self.up_block1 = UpBlock3D(block_expansion, block_expansion)
         self.up_block2 = UpBlock3D(2 * block_expansion, block_expansion)
         self.up_block3 = UpBlock3D(2 * block_expansion, block_expansion)
-        self.conv = nn.Conv3d(in_channels=block_expansion + (2 * num_kp + num_channels), out_channels=2, kernel_size=3, padding=1)
+        self.conv = nn.Conv3d(in_channels=block_expansion + (2 * num_kp ), out_channels=2, kernel_size=3, padding=1)
 
         self.conv.weight.data.zero_()
         self.conv.bias.data.zero_()
-
 
         self.kp2gaussian = KP2Gaussian(sigma=kp_gaussian_sigma, spatial_size=spatial_size)
         self.spatial_size = spatial_size
@@ -33,11 +32,12 @@ class PredictedDeformation(nn.Module):
 
         movement_encoding = self.kp2gaussian(kp_video)
 
-        movement_encoding_x = movement_encoding * kp_video_diff[..., 0].unsqueeze(-1).unsqueeze(-1)
-        movement_encoding_y = movement_encoding * kp_video_diff[..., 1].unsqueeze(-1).unsqueeze(-1)
+        bs, d, num_kp, h, w = movement_encoding.shape
 
-        movement_encoding = torch.cat([movement_encoding_x, movement_encoding_y], dim=2)
+        kp_video_diff = kp_video_diff.view((bs, d, -1)).unsqueeze(-1).unsqueeze(-1).repeat(1, 1, 1, h, w)
 
+        #movement_encoding = torch.cat([movement_encoding, kp_video_diff], dim=2)
+        movement_encoding = kp_video_diff
         return movement_encoding.permute(0, 2, 1, 3, 4)
 
     def predict(self, x):
@@ -64,7 +64,7 @@ class PredictedDeformation(nn.Module):
         appearance_encoding = appearance_frame.unsqueeze(2)
         appearance_encoding = appearance_encoding.repeat(1, 1, movement_encoding.shape[2], 1, 1)
 
-        deformations_relative = self.predict(torch.cat([movement_encoding, appearance_encoding], dim=1))
+        deformations_relative = self.predict(movement_encoding)# #torch.cat([movement_encoding, appearance_encoding], dim=1))
         deformations_relative = deformations_relative.permute(0, 2, 3, 4, 1)
 
         if self.relative:

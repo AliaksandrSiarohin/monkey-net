@@ -5,16 +5,17 @@ import torch.nn.functional as F
 from modules.appearance_encoder import AppearanceEncoder
 from modules.deformation_module import PredictedDeformation, AffineDeformation
 from modules.video_decoder import VideoDecoder
-from modules.kp_decoder import KPDecoder
+from modules.kp_extractor import KPExtractor
 
 from modules.util import make_coordinate_grid
-
+import numpy as np
 
 class DDModel(nn.Module):
     """
     Deformable disentangling model for videos.
     """
-    def __init__(self, block_expansion, spatial_size, num_channels, num_kp, kp_gaussian_sigma, deformation_type):
+    def __init__(self, block_expansion, spatial_size, num_channels, num_kp, kp_gaussian_sigma, deformation_type,
+                 kp_extractor_temperature):
         super(DDModel, self).__init__()
 
         assert deformation_type in ['affine', 'predicted']
@@ -30,11 +31,12 @@ class DDModel(nn.Module):
                                                         num_kp=num_kp)
 
         self.video_decoder = VideoDecoder(block_expansion=block_expansion, num_channels=num_channels)
-        self.kp_decoder = KPDecoder(block_expansion=block_expansion, num_kp=num_kp)
+        self.kp_extractor = KPExtractor(block_expansion=block_expansion, num_kp=num_kp, num_channels=num_channels,
+                                        temperature=kp_extractor_temperature)
 
         self.spatial_size = spatial_size
 
-    def _deform_input(self, inp, deformations_absolute):
+    def deform_input(self, inp, deformations_absolute):
         bs, d, h_old, w_old, _ = deformations_absolute.shape
         _, ch, h, w = inp.shape
 
@@ -56,7 +58,11 @@ class DDModel(nn.Module):
         return deformed_inp
 
     def extract_kp(self, frames):
-        return None
+        bs, c, d, h, w = frames.shape
+        frames = frames.permute(0, 2, 1, 3, 4).contiguous().view(bs * d, c, h, w)
+        kp = self.kp_extractor(frames)
+        _, num_kp, _ = kp.shape
+        return kp.view(bs, d, num_kp, 2)
 
     def predict(self, appearance_frame, motion_video, kp_appearance, kp_video):
         appearance_skips = self.appearance_encoder(appearance_frame)
@@ -66,8 +72,8 @@ class DDModel(nn.Module):
         deformations_absolute = self.deformation_module(appearance_frame, motion_video, kp_appearance, kp_video)
         deformations_absolute = deformations_absolute.view(bs, d, h, w, 2)
 
-        deformed_skips = [self._deform_input(skip, deformations_absolute) for skip in appearance_skips]
-        video_deformed = self._deform_input(appearance_frame, deformations_absolute)
+        deformed_skips = [self.deform_input(skip, deformations_absolute) for skip in appearance_skips]
+        video_deformed = self.deform_input(appearance_frame, deformations_absolute)
 
         video_prediction = self.video_decoder(deformed_skips)
 
