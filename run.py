@@ -97,7 +97,6 @@ if __name__ == "__main__":
     log_dir = os.path.join(opt.log_dir, opt.config.split('.')[0] + '-' + opt.mode + ' ' + strftime("%d-%m-%y %H:%M:%S", gmtime()))
 
     model = DDModel(block_expansion=config['block_expansion'],
-                    spatial_size=config['spatial_size'],
                     num_channels=config['num_channels'],
                     num_kp=config['num_kp'],
                     kp_gaussian_sigma=config['kp_gaussian_sigma'],
@@ -112,7 +111,7 @@ if __name__ == "__main__":
 
     dataset = FramesDataset(root_dir=config['data_dir'], transform=data_transform, offline_kp=config['offline_kp'],
                             offline_flow=config['offline_flow'], image_shape=(config['spatial_size'], config['spatial_size'], 3),
-                            is_train=(opt.mode == 'train'))
+                            is_train=(opt.mode == 'train'), frames_per_sample=config['frames_per_sample'])
 
     if opt.mode == 'train':
         print ("Start model training...")

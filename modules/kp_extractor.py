@@ -57,7 +57,7 @@ class KPExtractor(nn.Module):
         heatmap = F.softmax(out / self.temperature, dim=2)
         out = heatmap.view(final_shape + (1, ))
 
-        grid = make_coordinate_grid(final_shape[2], x.type()).unsqueeze(0).unsqueeze(1)
+        grid = make_coordinate_grid(final_shape[2:4], x.type()).unsqueeze(0).unsqueeze(1)
 
         out = (out * grid).sum(dim=(2, 3))
 

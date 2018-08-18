@@ -1,43 +1,49 @@
 from torch import nn
 import torch.nn.functional as F
 import torch
-from modules.util import DownBlock3D, UpBlock3D, KP2Gaussian, make_coordinate_grid
+from modules.util import DownBlock3D, UpBlock3D, kp2gaussian, make_coordinate_grid
 
 
 class PredictedDeformation(nn.Module):
     """
     Deformation module receive first frame and keypoints difference heatmap. It has hourglass architecture.
     """
-    def __init__(self, block_expansion, num_kp, num_channels, kp_gaussian_sigma, spatial_size, relative=False):
+    def __init__(self, block_expansion, num_kp, num_channels, kp_gaussian_sigma, relative=False):
         super(PredictedDeformation, self).__init__()
 
-        self.down_block1 = DownBlock3D(2 * num_kp, block_expansion)
+        out_channels_first = num_kp * max(1, block_expansion // 4)
+        self.single_kp_conv = nn.Conv2d(3 * num_kp, out_channels_first, kernel_size=1, groups=num_kp)
+
+        self.down_block1 = DownBlock3D(out_channels_first + num_channels, block_expansion)
         self.down_block2 = DownBlock3D(block_expansion, block_expansion)
         self.down_block3 = DownBlock3D(block_expansion, block_expansion)
         self.up_block1 = UpBlock3D(block_expansion, block_expansion)
         self.up_block2 = UpBlock3D(2 * block_expansion, block_expansion)
         self.up_block3 = UpBlock3D(2 * block_expansion, block_expansion)
-        self.conv = nn.Conv3d(in_channels=block_expansion + (2 * num_kp ), out_channels=2, kernel_size=3, padding=1)
+        self.conv = nn.Conv3d(in_channels=block_expansion + out_channels_first + num_channels, out_channels=2, kernel_size=3, padding=1)
 
         self.conv.weight.data.zero_()
         self.conv.bias.data.zero_()
 
-        self.kp2gaussian = KP2Gaussian(sigma=kp_gaussian_sigma, spatial_size=spatial_size)
-        self.spatial_size = spatial_size
+        self.kp_gaussian_sigma = kp_gaussian_sigma
         self.relative = relative
 
-    def create_movement_encoding(self, kp_appearance, kp_video):
+    def create_movement_encoding(self, kp_appearance, kp_video, spatial_size):
         kp_video_diff = kp_video - kp_video[:, 0].unsqueeze(1)
         kp_video = kp_video_diff + kp_appearance
 
-        movement_encoding = self.kp2gaussian(kp_video)
+        movement_encoding = kp2gaussian(kp_video, spatial_size=spatial_size, sigma=self.kp_gaussian_sigma)
 
         bs, d, num_kp, h, w = movement_encoding.shape
 
-        kp_video_diff = kp_video_diff.view((bs, d, -1)).unsqueeze(-1).unsqueeze(-1).repeat(1, 1, 1, h, w)
+        kp_video_diff = kp_video_diff.view((bs, d, num_kp, 2, 1, 1)).repeat(1, 1, 1, 1, h, w)
+        movement_encoding = movement_encoding.unsqueeze(3)
 
-        #movement_encoding = torch.cat([movement_encoding, kp_video_diff], dim=2)
-        movement_encoding = kp_video_diff
+        movement_encoding = torch.cat([movement_encoding, kp_video_diff], dim=3)
+        movement_encoding = movement_encoding.view(bs * d, -1, h, w)
+        movement_encoding = self.single_kp_conv(movement_encoding)
+        movement_encoding = movement_encoding.view(bs, d, -1, h, w)
+
         return movement_encoding.permute(0, 2, 1, 3, 4)
 
     def predict(self, x):
@@ -59,19 +65,24 @@ class PredictedDeformation(nn.Module):
         return out
 
     def forward(self, appearance_frame, motion_video, kp_appearance, kp_video):
-        movement_encoding = self.create_movement_encoding(kp_appearance, kp_video)
+        kp_appearance = kp_appearance.detach()
+        kp_video = kp_video.detach()
+
+        bs, d, c, h, w = motion_video.shape
+
+        movement_encoding = self.create_movement_encoding(kp_appearance, kp_video, (h, w))
 
         appearance_encoding = appearance_frame.unsqueeze(2)
         appearance_encoding = appearance_encoding.repeat(1, 1, movement_encoding.shape[2], 1, 1)
 
-        deformations_relative = self.predict(movement_encoding)# #torch.cat([movement_encoding, appearance_encoding], dim=1))
+        deformations_relative = self.predict(torch.cat([movement_encoding, appearance_encoding], dim=1))
         deformations_relative = deformations_relative.permute(0, 2, 3, 4, 1)
 
         if self.relative:
             return deformations_relative
 
-        coordinate_grid = make_coordinate_grid(self.spatial_size, type=appearance_encoding.type())
-        coordinate_grid = coordinate_grid.view(1, 1, self.spatial_size, self.spatial_size, 2)
+        coordinate_grid = make_coordinate_grid((h, w), type=appearance_encoding.type())
+        coordinate_grid = coordinate_grid.view(1, 1, h, w, 2)
 
         deformations_absolute = deformations_relative + coordinate_grid
         return deformations_absolute
@@ -81,7 +92,7 @@ class AffineDeformation(nn.Module):
     """
     Deformation module receive keypoint cordinates and try to predict values for affine deformation. It has MPL architecture.
     """
-    def __init__(self, block_expansion, num_kp, spatial_size):
+    def __init__(self, block_expansion, num_kp):
         super(AffineDeformation, self).__init__()
 
         self.linear1 = nn.Linear(2 * 2 * num_kp, 4 * block_expansion)
@@ -91,7 +102,6 @@ class AffineDeformation(nn.Module):
         self.linear3.weight.data.zero_()
         self.linear3.bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
 
-        self.spatial_size = spatial_size
 
     def create_movement_encoding(self, kp_appearance, kp_video):
         kp_video_diff = kp_video - kp_video[:, 0].unsqueeze(1)
@@ -104,6 +114,7 @@ class AffineDeformation(nn.Module):
 
     def forward(self, appearance_frame, motion_video, kp_appearance, kp_video):
         movement_encoding = self.create_movement_encoding(kp_appearance, kp_video)
+        bs, d, c, h, w = motion_video.shape
 
         out = self.linear1(movement_encoding)
         out = F.relu(out)
@@ -114,6 +125,6 @@ class AffineDeformation(nn.Module):
         out = self.linear3(out)
         out = out.view(-1, 2, 3)
 
-        deformations_absolute = F.affine_grid(out, torch.Size((out.shape[0], 3, self.spatial_size, self.spatial_size)))
+        deformations_absolute = F.affine_grid(out, torch.Size((out.shape[0], 3, h, w)))
 
         return deformations_absolute

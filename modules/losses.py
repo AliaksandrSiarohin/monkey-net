@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 from modules.util import make_coordinate_grid, compute_image_gradient
 
@@ -21,7 +22,7 @@ def tv_loss(deformation, target, loss_weight, border_weight=1):
     border = torch.exp(-border_weight * border)
 
     deformation = deformation.view(bs * d, h, w, 2)
-    grid = make_coordinate_grid(h, deformation.type())
+    grid = make_coordinate_grid((h, w), deformation.type())
     grid = grid.unsqueeze(0)
 
     deformation_relative = (deformation - grid)
@@ -57,9 +58,8 @@ def flow_reconstruction(deformation, flow, weight):
     if weight == 0 or flow is None:
         return 0
     bs, d, h, w, _ = deformation.shape
-
     deformation = deformation.view(bs, d, h, w, 2)
-    grid = make_coordinate_grid(h, deformation.type())
+    grid = make_coordinate_grid((h, w), deformation.type())
     grid = grid.unsqueeze(0).unsqueeze(0)
 
     deformation_relative = (deformation - grid)
@@ -68,13 +68,17 @@ def flow_reconstruction(deformation, flow, weight):
 
 
 def kp_movement_loss(kp_video, deformation, weight):
+    kp_video = kp_video.detach()
     if weight == 0:
         return 0
     bs, d, h, w, _ = deformation.shape
     deformation = deformation.view(-1, h * w, 2)
     bs, d, num_kp, _ = kp_video.shape
 
-    kp_index = h * ((kp_video.view(-1, num_kp, 2) + 1) / 2)
+    kp_index = ((kp_video.view(-1, num_kp, 2) + 1) / 2)
+    multiple = torch.from_numpy(np.array((w - 1, h - 1))).view(1, 1, 2).type(kp_index.type())
+    kp_index = multiple * kp_index
+
     kp_index = kp_index.long()
     kp_index = kp_index[:, :, 0] + kp_index[:, :, 1] * w
 

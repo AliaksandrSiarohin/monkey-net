@@ -1,4 +1,4 @@
-data_dir: data/shapes
+data_dir: data/actions
 batch_size: 2
 spatial_size: 64
 num_channels: 3
@@ -9,7 +9,7 @@ kp_gaussian_sigma: 0.1
 kp_extractor_temperature: 0.1
 
 offline_kp: False
-offline_flow: True
+offline_flow: False
 block_expansion: 16
 deformation_type: "predicted"
 
@@ -18,14 +18,14 @@ lr: 1.0e-3
 data_load_workers: 4
 log_freq: 20
 cpk_freq: 1000
-num_iter: 1500
+num_iter: 10000
 
 loss_weights:
   reconstruction: 50
-  reconstruction_deformed: 0
+  reconstruction_deformed: 50
   reconstruction_grad: 0
-  kp_movement: 0
+  kp_movement: 10
   tv: 0
-  tv_border: 0
-  reconstruction_flow: 50
+  tv_border: 1
+  reconstruction_flow: 0
 

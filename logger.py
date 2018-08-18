@@ -97,12 +97,11 @@ class Visualizer:
 
     def draw_video_with_kp(self, video, kp_array):
         video_array = np.copy(video)
-        spatial_size = video_array.shape[1]
+        spatial_size = np.array(video_array.shape[2:0:-1])[np.newaxis, np.newaxis]
         kp_array = spatial_size * (kp_array + 1) / 2
-
         for i in range(len(video_array)):
             for kp in kp_array[i]:
-                rr, cc = circle(kp[1], kp[0], self.kp_size, shape=video_array.shape[1:2])
+                rr, cc = circle(kp[1], kp[0], self.kp_size, shape=video_array.shape[1:3])
                 video_array[i][rr, cc] = (1, 1, 1)
         return video_array
 

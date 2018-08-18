@@ -10,6 +10,7 @@ import imageio
 
 from skimage.transform import estimate_transform, warp_coords
 
+
 class VideoToTensor(object):
     def __init__(self, cuda=True):
         self.cuda = cuda
@@ -20,17 +21,16 @@ class VideoToTensor(object):
 
 
 class Normalize(object):
-    def __init__(self, spatial_size, cuda=True):
-        self.spatial_size = spatial_size
-        self.cuda = cuda
+    def __init__(self, spatial_size):
+        self.spatial_size = np.array(spatial_size)
 
     def __call__(self, sample):
         if 'kp_array' in sample:
-            sample['kp_array'] /= (self.spatial_size - 1)
+            sample['kp_array'] /= (self.spatial_size[np.newaxis, np.newaxis] - 1)
             sample['kp_array'] *= 2
             sample['kp_array'] -= 1
         if 'flow_array' in sample:
-            sample['flow_array'] /= (self.spatial_size - 1)
+            sample['flow_array'] /= (self.spatial_size[np.newaxis, np.newaxis, np.newaxis] - 1)
             sample['flow_array'] *= 2
         return sample
 
@@ -38,7 +38,7 @@ class Normalize(object):
 class FramesDataset(Dataset):
     """Dataset of videos, represented as image of consequent frames"""
     def __init__(self, root_dir, transform=None, image_shape=(64, 64, 3), is_train=True, random_seed=0,
-                 offline_kp=True, offline_flow=True):
+                 offline_kp=True, offline_flow=True, frames_per_sample=32):
         """
         Args:
             root_dir (string): Path to folder with images
@@ -49,6 +49,7 @@ class FramesDataset(Dataset):
         self.image_shape = image_shape
         self.offline_kp = offline_kp
         self.offline_flow = offline_flow
+        self.frames_per_sample = frames_per_sample
 
         train_images, test_images = train_test_split(self.images, random_state=random_seed, test_size=0.2)
 
@@ -79,7 +80,7 @@ class FramesDataset(Dataset):
 
         kp_array = kp_array[:, :, np.newaxis, np.newaxis, :]
 
-        flow_array = np.zeros((kp_array.shape[0], self.image_shape[0], self.image_shape[1], 2), dtype=np.float32)
+        flow_array = np.zeros((kp_array.shape[0], video_array.shape[1], video_array.shape[2], 2), dtype=np.float32)
         for i in range(kp_array.shape[0]):
             flow_array[i] = kp_array[0, 0] - kp_array[i, 0]
 
@@ -101,6 +102,11 @@ class FramesDataset(Dataset):
 
         video_array = video_array.reshape((-1, ) + self.image_shape)
         video_array = np.moveaxis(video_array, 1, 2)
+
+        frame_count = video_array.shape[0]
+        first_frame = np.random.choice(frame_count - self.frames_per_sample + 1, size=1)[0]
+
+        video_array = video_array[first_frame:(first_frame + self.frames_per_sample)]
 
         out = {'video_array': video_array}
 
@@ -147,13 +153,12 @@ class PairedDataset(Dataset):
         return {**first, **second}
 
 if __name__ == "__main__":
-    from logger import Visualizer
-    actions_dataset = FramesDataset(root_dir='data/shapes', is_train=True)
+    actions_dataset = FramesDataset(root_dir='data/actions', is_train=True)
 
     video = actions_dataset[20]['video_array']
-    flow = actions_dataset[20]['flow_array']
+    from skimage.io import imsave
 
-    flow = (flow / 64.0)# .astype('uint8')
+    imsave('1.png', video[0])
+    imsave('2.png', video[1])
 
-    imageio.mimsave('fl.gif', flow[..., 1])
     #imageio.mimsave('movie.gif', video)
