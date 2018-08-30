@@ -1,36 +1,33 @@
 from torch import nn
 import torch.nn.functional as F
 import torch
-from modules.util import DownBlock3D, UpBlock3D, kp2gaussian, make_coordinate_grid
+from modules.util import ResBlock3D, kp2gaussian, make_coordinate_grid2d, add_z_coordinate
 
 
 class PredictedDeformation(nn.Module):
     """
     Deformation module receive first frame and keypoints difference heatmap. It has hourglass architecture.
     """
-    def __init__(self, block_expansion, num_kp, num_channels, kp_gaussian_sigma, relative=False):
+    def __init__(self, block_expansion, num_kp, num_channels, kp_gaussian_sigma, num_blocks=1):
         super(PredictedDeformation, self).__init__()
 
         out_channels_first = num_kp * max(1, block_expansion // 4)
         self.single_kp_conv = nn.Conv2d(3 * num_kp, out_channels_first, kernel_size=1, groups=num_kp)
 
-        self.down_block1 = DownBlock3D(out_channels_first + num_channels, block_expansion)
-        self.down_block2 = DownBlock3D(block_expansion, block_expansion)
-        self.down_block3 = DownBlock3D(block_expansion, block_expansion)
-        self.up_block1 = UpBlock3D(block_expansion, block_expansion)
-        self.up_block2 = UpBlock3D(2 * block_expansion, block_expansion)
-        self.up_block3 = UpBlock3D(2 * block_expansion, block_expansion)
-        self.conv = nn.Conv3d(in_channels=block_expansion + out_channels_first + num_channels, out_channels=2, kernel_size=3, padding=1)
+        blocks = []
+        for i in range(num_blocks):
+            blocks.append(ResBlock3D(out_channels_first + num_channels, merge='cat'))
+
+        self.blocks = nn.ModuleList(blocks)
+        self.conv = nn.Conv3d(in_channels=2 * (out_channels_first + num_channels), out_channels=2, kernel_size=3, padding=1)
 
         self.conv.weight.data.zero_()
         self.conv.bias.data.zero_()
 
         self.kp_gaussian_sigma = kp_gaussian_sigma
-        self.relative = relative
 
-    def create_movement_encoding(self, kp_appearance, kp_video, spatial_size):
-        kp_video_diff = kp_video - kp_video[:, 0].unsqueeze(1)
-        kp_video = kp_video_diff + kp_appearance
+    def create_movement_encoding(self, kp_video, spatial_size):
+        kp_video_diff = torch.cat([kp_video[:, 0].unsqueeze(1), kp_video[:, :-1]], dim=1) - kp_video
 
         movement_encoding = kp2gaussian(kp_video, spatial_size=spatial_size, sigma=self.kp_gaussian_sigma)
 
@@ -43,49 +40,43 @@ class PredictedDeformation(nn.Module):
         movement_encoding = movement_encoding.view(bs * d, -1, h, w)
         movement_encoding = self.single_kp_conv(movement_encoding)
         movement_encoding = movement_encoding.view(bs, d, -1, h, w)
+        # movement_encoding = kp_video_diff.view(bs, d, -1, h, w)
+        # movement_encoding = movement_encoding[:, :, :2]
 
         return movement_encoding.permute(0, 2, 1, 3, 4)
 
     def predict(self, x):
-        out1 = self.down_block1(x)
-        out2 = self.down_block2(out1)
-        out3 = self.down_block3(out2)
-
-        out4 = self.up_block1(out3)
-        out4 = torch.cat([out4, out2], dim=1)
-
-        out5 = self.up_block2(out4)
-        out5 = torch.cat([out5, out1], dim=1)
-
-        out6 = self.up_block3(out5)
-        out6 = torch.cat([out6, x], dim=1)
-
-        out = self.conv(out6)
-
+        out = x
+        for block in self.blocks:
+            out = block(out)
+        out = self.conv(out)
         return out
 
-    def forward(self, appearance_frame, motion_video, kp_appearance, kp_video):
-        kp_appearance = kp_appearance.detach()
+    def forward(self, appearance, kp_video):
         kp_video = kp_video.detach()
 
-        bs, d, c, h, w = motion_video.shape
+        bs, c, d, h, w = appearance.shape
 
-        movement_encoding = self.create_movement_encoding(kp_appearance, kp_video, (h, w))
+        movement_encoding = self.create_movement_encoding(kp_video, (h, w))
 
-        appearance_encoding = appearance_frame.unsqueeze(2)
-        appearance_encoding = appearance_encoding.repeat(1, 1, movement_encoding.shape[2], 1, 1)
-
-        deformations_relative = self.predict(torch.cat([movement_encoding, appearance_encoding], dim=1))
+        deformations_relative = self.predict(torch.cat([movement_encoding, appearance], dim=1))
+        # print (movement_encoding.shape)
+        #deformations_relative = movement_encoding
         deformations_relative = deformations_relative.permute(0, 2, 3, 4, 1)
 
-        if self.relative:
-            return deformations_relative
+        relative_to_first = deformations_relative.cumsum(dim=1)
 
-        coordinate_grid = make_coordinate_grid((h, w), type=appearance_encoding.type())
+        coordinate_grid = make_coordinate_grid2d((h, w), type=appearance.type())
         coordinate_grid = coordinate_grid.view(1, 1, h, w, 2)
 
         deformations_absolute = deformations_relative + coordinate_grid
-        return deformations_absolute
+        deformations_absolute = add_z_coordinate(deformations_absolute, deformations_absolute.type(), to_first=False)
+
+        absolute_to_first = relative_to_first + coordinate_grid
+        absolute_to_first = add_z_coordinate(absolute_to_first, absolute_to_first.type(), to_first=True)
+
+        return {'absolute_to_previous': deformations_absolute, 'absolute_to_first': absolute_to_first,
+                'relative_to_previous': deformations_relative, 'relative_to_first': relative_to_first}
 
 
 class AffineDeformation(nn.Module):
@@ -126,5 +117,6 @@ class AffineDeformation(nn.Module):
         out = out.view(-1, 2, 3)
 
         deformations_absolute = F.affine_grid(out, torch.Size((out.shape[0], 3, h, w)))
+        deformations_absolute = add_z_coordinate(deformations_absolute, deformations_absolute.type())
 
         return deformations_absolute

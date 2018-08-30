@@ -1,7 +1,7 @@
 from torch import nn
 import torch.nn.functional as F
 import torch
-from modules.util import UpBlock2D, DownBlock2D, make_coordinate_grid
+from modules.util import UpBlock2D, DownBlock2D, make_coordinate_grid2d
 
 
 class KPExtractor(nn.Module):
@@ -57,7 +57,7 @@ class KPExtractor(nn.Module):
         heatmap = F.softmax(out / self.temperature, dim=2)
         out = heatmap.view(final_shape + (1, ))
 
-        grid = make_coordinate_grid(final_shape[2:4], x.type()).unsqueeze(0).unsqueeze(1)
+        grid = make_coordinate_grid2d(final_shape[2:4], x.type()).unsqueeze(0).unsqueeze(1)
 
         out = (out * grid).sum(dim=(2, 3))
 

@@ -22,7 +22,7 @@ def compute_image_gradient(image, padding=0):
     return torch.cat([grad_x, grad_y], dim=1)
 
 
-def make_coordinate_grid(spatial_size, type):
+def make_coordinate_grid2d(spatial_size, type):
     h, w = spatial_size
     x = torch.arange(w).type(type)
     y = torch.arange(h).type(type)
@@ -36,6 +36,23 @@ def make_coordinate_grid(spatial_size, type):
     meshed = torch.cat([xx.unsqueeze_(2), yy.unsqueeze_(2)], 2)
 
     return meshed
+
+
+def add_z_coordinate(inp, type, to_first=False):
+    d, h, w = inp.shape[1:-1]
+
+    if to_first:
+        z = torch.zeros(d).type(type)
+    else:
+        z = torch.cat([torch.zeros(1).type(torch.LongTensor), torch.arange(d - 1)], dim=0).type(type)
+
+    if d != 1:
+        z = (2 * (z / (d - 1)) - 1)
+    else:
+        z = z * 0 - 1
+    zz = z.view(1, -1, 1, 1, 1).repeat(inp.shape[0], 1, h, w, 1)
+
+    return torch.cat([inp, zz], dim=-1)
 
 class DownBlock2D(nn.Module):
     """
@@ -54,6 +71,32 @@ class DownBlock2D(nn.Module):
         out = self.pool(out)
         return out
 
+
+class ResBlock3D(nn.Module):
+    """
+    Res block, preserve spatial resolution.
+    """
+    def __init__(self, in_features, merge='cat'):
+        super(ResBlock3D, self).__init__()
+        assert merge in ['cat', 'sum']
+        self.conv1 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=3, padding=1)
+        self.norm1 = nn.InstanceNorm3d(in_features, affine=True)
+        self.norm2 = nn.InstanceNorm3d(in_features, affine=True)
+        self.merge = merge
+
+    def forward(self, x):
+        out = self.norm1(x)
+        out = F.relu(out)
+        out = self.conv1(out)
+        out = self.norm2(out)
+        out = F.relu(out)
+        out = self.conv2(out)
+        if self.merge == 'sum':
+            out += x
+        else:
+            out = torch.cat([out, x], dim=1)
+        return out
 
 class UpBlock2D(nn.Module):
     """
@@ -84,7 +127,7 @@ class UpBlock3D(nn.Module):
         self.norm = nn.InstanceNorm3d(out_features, affine=True)
 
     def forward(self, x):
-        out = F.interpolate(x, scale_factor=(1, 2, 2))
+        out = F.interpolate(x, scale_factor=(2, 2, 2))
         out = self.conv(out)
         out = self.norm(out)
         out = F.relu(out)
@@ -112,7 +155,7 @@ class DownBlock3D(nn.Module):
 
 
 def kp2gaussian(kp, spatial_size, sigma):
-    coordinate_grid = make_coordinate_grid(spatial_size, kp.type())
+    coordinate_grid = make_coordinate_grid2d(spatial_size, kp.type())
 
     number_of_leading_dimensions = len(kp.shape) - 1
     shape = (1, ) * number_of_leading_dimensions + coordinate_grid.shape
@@ -131,37 +174,6 @@ def kp2gaussian(kp, spatial_size, sigma):
     out = torch.exp(-sum / (2 * sigma ** 2))
 
     return out
-
-# class KP2Gaussian(nn.Module):
-#     """
-#     Represent normalized[0, 1] coordinates keypoints as feature map
-#     """
-#     def __init__(self, spatial_size, sigma):
-#         super(KP2Gaussian, self).__init__()
-#         self.spatial_size = spatial_size
-#         self.sigma = sigma
-#
-#     def forward(self, kp):
-#         # Preprocess coordinate grid
-#         coordinate_grid = make_coordinate_grid(self.spatial_size, kp.type())
-#
-#         number_of_leading_dimensions = len(kp.shape) - 1
-#         shape = (1, ) * number_of_leading_dimensions + coordinate_grid.shape
-#
-#         coordinate_grid = coordinate_grid.view(*shape)
-#         repeats = kp.shape[:number_of_leading_dimensions] + (1, 1, 1)
-#         coordinate_grid = coordinate_grid.repeat(*repeats)
-#
-#         # Preprocess kp shape
-#         shape = kp.shape[:number_of_leading_dimensions] + (1, 1, 2)
-#         kp = kp.view(*shape)
-#
-#         # Computing gaussian
-#         squares = (coordinate_grid - kp) ** 2
-#         sum = torch.sum(squares, dim=-1)
-#         out = torch.exp(-sum / (2 * self.sigma ** 2))
-#
-#         return out
 
 
 if __name__ == "__main__":
