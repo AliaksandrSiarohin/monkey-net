@@ -10,6 +10,7 @@ from modules.kp_extractor import KPExtractor
 from modules.util import make_coordinate_grid, kp2gaussian
 import numpy as np
 
+
 class DDModel(nn.Module):
     """
     Deformable disentangling model for videos.

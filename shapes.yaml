@@ -18,7 +18,7 @@ model_params:
   use_kp_embedding: True
 
 schedule_params:
-  num_epochs: [300, 100, 50, 50, 50]
+  num_epochs: [2, 1, 1, 1, 1]
   frames_per_sample: [4, 8, 16, 32, 32]
   lr: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3]
   batch_size: [2, 2, 2, 2, 2]

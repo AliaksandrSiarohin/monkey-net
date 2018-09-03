@@ -71,7 +71,7 @@ class PredictedDeformation(nn.Module):
         kp_appearance = kp_appearance.detach()
         kp_video = kp_video.detach()
 
-        bs, d, c, h, w = motion_video.shape
+        _, _, _, h, w = motion_video.shape
 
         movement_encoding = self.create_movement_encoding(kp_appearance, kp_video, (h, w))
         #appearance_encoding = appearance_frame.unsqueeze(2)
@@ -118,7 +118,7 @@ class AffineDeformation(nn.Module):
 
     def forward(self, appearance_frame, motion_video, kp_appearance, kp_video):
         movement_encoding = self.create_movement_encoding(kp_appearance, kp_video)
-        bs, d, c, h, w = motion_video.shape
+        bs, _, _, h, w = motion_video.shape
 
         out = self.linear1(movement_encoding)
         out = F.relu(out)
@@ -136,7 +136,8 @@ class AffineDeformation(nn.Module):
 
 class IdentityDeformation(nn.Module):
     def forward(self, appearance_frame, motion_video, kp_appearance, kp_video):
-        bs, d, c, h, w = motion_video.shape
+        bs, c, d, h, w = motion_video.shape
         coordinate_grid = make_coordinate_grid((h, w), type=motion_video.type())
-        coordinate_grid = coordinate_grid.view(1, 1, h, w, 2)
+        coordinate_grid = coordinate_grid.view(1, 1, h, w, 2).repeat(bs, d, 1, 1, 1)
+
         return coordinate_grid

@@ -130,7 +130,7 @@ class Visualizer:
         out_video_batch = out['video_prediction'].data.cpu().numpy()
         appearance_deformed_batch = out['video_deformed'].data.cpu().numpy()
         motion_video_batch = inp['first_video_array'].data.cpu().numpy()
-        appearance_video_batch = inp['second_video_array'].data.cpu().numpy()
+        appearance_video_batch = inp['second_video_array'][:, :, 0:1].repeat(1, 1, out_video_batch.shape[2], 1, 1).data.cpu().numpy()
 
         out_video_batch = np.transpose(out_video_batch, [0, 2, 3, 4, 1])
         motion_video_batch = np.transpose(motion_video_batch, [0, 2, 3, 4, 1])

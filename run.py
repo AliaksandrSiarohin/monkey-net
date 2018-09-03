@@ -40,7 +40,7 @@ def train(config, model, checkpoint, log_dir, dataset):
 
     with Logger(model=model, optimizer=optimizer, log_dir=log_dir, **config['log_params']) as logger:
         for it in trange(start_iter, epochs_milestones[-1]):
-            for x in dataloader:
+            for i, x in enumerate(dataloader):
                 out = model(x)
                 loss, loss_list = total_loss(x, out, config['loss_weights'])
 
@@ -49,6 +49,8 @@ def train(config, model, checkpoint, log_dir, dataset):
                 optimizer.zero_grad()
 
                 logger.save_values(loss_list=loss_list)
+                # if i % 50 == 0:
+                #     logger.log(it, inp=x)
 
             if it in epochs_milestones:
                 schedule_iter = np.searchsorted(epochs_milestones, it, side='right')

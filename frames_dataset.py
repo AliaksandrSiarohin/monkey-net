@@ -107,7 +107,8 @@ class FramesDataset(Dataset):
         video_array = np.moveaxis(video_array, 1, 2)
 
         frame_count = video_array.shape[0]
-        first_frame = np.random.choice(frame_count - self.frames_per_sample + 1, size=1)[0]
+
+        first_frame = np.random.choice(max(1, frame_count - self.frames_per_sample + 1), size=1)[0]
 
         video_array = video_array[first_frame:(first_frame + self.frames_per_sample)]
 

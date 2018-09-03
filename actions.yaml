@@ -13,9 +13,9 @@ model_params:
   kp_gaussian_sigma: 0.1
   kp_extractor_temperature: 0.1
   block_expansion: 16
-  deformation_type: "predicted"
+  deformation_type: "none"
   num_channels: 3
-  use_kp_embedding: False
+  use_kp_embedding: True
 
 schedule_params:
   num_epochs: [300, 200, 200, 200, 200]
