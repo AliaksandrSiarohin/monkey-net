@@ -21,25 +21,25 @@ class VideoDecoder(nn.Module):
     """
     Video decoder, take deformed feature maps and reconstruct a video.
     """
-    def __init__(self, block_expansion, num_channels=3, num_kp=10):
+    def __init__(self, block_expansion, num_channels=3, num_kp=10, use_kp_embedding=True):
         super(VideoDecoder, self).__init__()
 
-        self.block1 = UpBlock3D(8 * block_expansion + num_kp, 8 * block_expansion)
+        self.block1 = UpBlock3D(8 * block_expansion + num_kp * use_kp_embedding, 8 * block_expansion)
 
         #self.ws1 = WeightedSumBlock(8 * block_expansion)
-        self.block2 = UpBlock3D(16 * block_expansion + num_kp, 4 * block_expansion)
+        self.block2 = UpBlock3D(16 * block_expansion + num_kp * use_kp_embedding, 4 * block_expansion)
 
         #self.ws2 = WeightedSumBlock(4 * block_expansion)
-        self.block3 = UpBlock3D(8 * block_expansion + num_kp, 2 * block_expansion)
+        self.block3 = UpBlock3D(8 * block_expansion + num_kp * use_kp_embedding, 2 * block_expansion)
 
         #self.ws3 = WeightedSumBlock(2 * block_expansion)
-        self.block4 = UpBlock3D(4 * block_expansion + num_kp, block_expansion)
+        self.block4 = UpBlock3D(4 * block_expansion + num_kp * use_kp_embedding, block_expansion)
 
         #self.ws4 = WeightedSumBlock(block_expansion)
-        self.block5 = UpBlock3D(2 * block_expansion + num_kp, block_expansion)
+        self.block5 = UpBlock3D(2 * block_expansion + num_kp * use_kp_embedding, block_expansion)
 
         #self.ws5 = WeightedSumBlock(num_channels)
-        self.conv = nn.Conv3d(in_channels=block_expansion + num_channels + num_kp,
+        self.conv = nn.Conv3d(in_channels=block_expansion + num_channels + num_kp * use_kp_embedding,
                               out_channels=num_channels, kernel_size=3, padding=1)
 
     def forward(self, x):

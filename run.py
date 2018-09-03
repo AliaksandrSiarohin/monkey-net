@@ -6,6 +6,7 @@ from tqdm import trange, tqdm
 
 import torch
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import MultiStepLR
 from torchvision import transforms
 
 from frames_dataset import VideoToTensor, Normalize, FramesDataset, PairedDataset
@@ -17,29 +18,49 @@ import numpy as np
 import imageio
 
 
+def set_optimizer_lr(optimizer, lr):
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+
 def train(config, model, checkpoint, log_dir, dataset):
     start_iter = 0
-    dataloader = DataLoader(dataset, batch_size=config['batch_size'],
-                            shuffle=True, num_workers=config['data_load_workers'])
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=config['lr'])
+    optimizer = torch.optim.Adam(model.parameters())
 
     if checkpoint is not None:
         start_iter = Logger.load_cpk(checkpoint, model, optimizer)
 
-    with Logger(model=model, optimizer=optimizer, log_dir=log_dir,
-                log_freq=config['log_freq'], cpk_freq=config['cpk_freq']) as logger:
-        for it in trange(start_iter, config['num_iter']):
-            x = next(iter(dataloader))
+    epochs_milestones = np.cumsum(config['schedule_params']['num_epochs'])
 
-            out = model(x)
-            loss, loss_list = total_loss(x, out, config['loss_weights'])
+    schedule_iter = np.searchsorted(epochs_milestones, start_iter)
+    dataloader = DataLoader(dataset, batch_size=config['schedule_params']['batch_size'][schedule_iter],
+                            shuffle=True, num_workers=4)
+    set_optimizer_lr(optimizer, config['schedule_params']['lr'][schedule_iter])
+    dataset.set_number_of_frames_per_sample(config['schedule_params']['frames_per_sample'][schedule_iter])
 
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
+    with Logger(model=model, optimizer=optimizer, log_dir=log_dir, **config['log_params']) as logger:
+        for it in trange(start_iter, epochs_milestones[-1]):
+            for x in dataloader:
+                out = model(x)
+                loss, loss_list = total_loss(x, out, config['loss_weights'])
 
-            logger.log(it, loss_list=loss_list, inp=x)
+                loss.backward()
+                optimizer.step()
+                optimizer.zero_grad()
+
+                logger.save_values(loss_list=loss_list)
+
+            if it in epochs_milestones:
+                schedule_iter = np.searchsorted(epochs_milestones, it, side='right')
+                lr = config['schedule_params']['lr'][schedule_iter]
+                bs = config['schedule_params']['batch_size'][schedule_iter]
+                frames_per_sample = config['schedule_params']['frames_per_sample'][schedule_iter]
+                print("Schedule step: lr - %s, bs - %s, frames_per_sample - %s" % (lr, bs, frames_per_sample))
+                dataloader = DataLoader(dataset, batch_size=bs, shuffle=True, num_workers=4)
+                set_optimizer_lr(optimizer, lr)
+                dataset.set_number_of_frames_per_sample(frames_per_sample)
+
+            logger.log(it, inp=x)
 
 
 def test(config, model, checkpoint, log_dir, dataset):
@@ -65,7 +86,7 @@ def test(config, model, checkpoint, log_dir, dataset):
 def transfer(config, model, checkpoint, log_dir, dataset):
     dataset = PairedDataset(initial_dataset=dataset, number_of_pairs=100)
     dataloader = DataLoader(dataset, batch_size=1,
-                            shuffle=True, num_workers=config['data_load_workers'])
+                            shuffle=True, num_workers=1)
 
     if checkpoint is not None:
         Logger.load_cpk(checkpoint, model, None)
@@ -96,22 +117,15 @@ if __name__ == "__main__":
 
     log_dir = os.path.join(opt.log_dir, opt.config.split('.')[0] + '-' + opt.mode + ' ' + strftime("%d-%m-%y %H:%M:%S", gmtime()))
 
-    model = DDModel(block_expansion=config['block_expansion'],
-                    num_channels=config['num_channels'],
-                    num_kp=config['num_kp'],
-                    kp_gaussian_sigma=config['kp_gaussian_sigma'],
-                    deformation_type=config['deformation_type'],
-                    kp_extractor_temperature=config['kp_extractor_temperature'])
+    model = DDModel(**config['model_params'])
     model = torch.nn.DataParallel(module=model, device_ids=opt.device_ids)
 
     data_transform = transforms.Compose([
         VideoToTensor(),
-        Normalize(config['spatial_size'])
+        Normalize(config['dataset_params']['image_shape'][0])
     ])
 
-    dataset = FramesDataset(root_dir=config['data_dir'], transform=data_transform, offline_kp=config['offline_kp'],
-                            offline_flow=config['offline_flow'], image_shape=(config['spatial_size'], config['spatial_size'], 3),
-                            is_train=(opt.mode == 'train'), frames_per_sample=config['frames_per_sample'])
+    dataset = FramesDataset(transform=data_transform, is_train=(opt.mode == 'train'), **config['dataset_params'])
 
     if opt.mode == 'train':
         print ("Start model training...")

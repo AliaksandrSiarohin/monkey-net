@@ -14,13 +14,13 @@ class PredictedDeformation(nn.Module):
         out_channels_first = num_kp * max(1, block_expansion // 4)
         self.single_kp_conv = nn.Conv2d(3 * num_kp, out_channels_first, kernel_size=1, groups=num_kp)
 
-        self.down_block1 = DownBlock3D(out_channels_first + num_channels, block_expansion)
-        self.down_block2 = DownBlock3D(block_expansion, block_expansion)
-        self.down_block3 = DownBlock3D(block_expansion, block_expansion)
-        self.up_block1 = UpBlock3D(block_expansion, block_expansion)
-        self.up_block2 = UpBlock3D(2 * block_expansion, block_expansion)
-        self.up_block3 = UpBlock3D(2 * block_expansion, block_expansion)
-        self.conv = nn.Conv3d(in_channels=block_expansion + out_channels_first + num_channels, out_channels=2, kernel_size=3, padding=1)
+        self.down_block1 = DownBlock3D(out_channels_first, block_expansion, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.down_block2 = DownBlock3D(block_expansion, block_expansion, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.down_block3 = DownBlock3D(block_expansion, block_expansion, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.up_block1 = UpBlock3D(block_expansion, block_expansion, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.up_block2 = UpBlock3D(2 * block_expansion, block_expansion, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.up_block3 = UpBlock3D(2 * block_expansion, block_expansion, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.conv = nn.Conv3d(in_channels=block_expansion + out_channels_first, out_channels=2, kernel_size=(3, 3, 3), padding=(1, 1, 1))
 
         self.conv.weight.data.zero_()
         self.conv.bias.data.zero_()
@@ -31,8 +31,11 @@ class PredictedDeformation(nn.Module):
     def create_movement_encoding(self, kp_appearance, kp_video, spatial_size):
         kp_video_diff = kp_video - kp_video[:, 0].unsqueeze(1)
         kp_video = kp_video_diff + kp_appearance
+        #kp_video_diff = torch.cat([kp_video[:, 0].unsqueeze(1), kp_video[:, :-1]], dim=1) - kp_video
 
         movement_encoding = kp2gaussian(kp_video, spatial_size=spatial_size, sigma=self.kp_gaussian_sigma)
+
+        movement_encoding = movement_encoding - movement_encoding[:, 0].unsqueeze(1)
 
         bs, d, num_kp, h, w = movement_encoding.shape
 
@@ -71,17 +74,18 @@ class PredictedDeformation(nn.Module):
         bs, d, c, h, w = motion_video.shape
 
         movement_encoding = self.create_movement_encoding(kp_appearance, kp_video, (h, w))
+        #appearance_encoding = appearance_frame.unsqueeze(2)
+        #appearance_encoding = appearance_encoding.repeat(1, 1, movement_encoding.shape[2], 1, 1)
 
-        appearance_encoding = appearance_frame.unsqueeze(2)
-        appearance_encoding = appearance_encoding.repeat(1, 1, movement_encoding.shape[2], 1, 1)
-
-        deformations_relative = self.predict(torch.cat([movement_encoding, appearance_encoding], dim=1))
+        #deformations_relative = self.predict(torch.cat([movement_encoding, appearance_encoding], dim=1))
+        deformations_relative = self.predict(movement_encoding)
         deformations_relative = deformations_relative.permute(0, 2, 3, 4, 1)
 
+        #deformations_relative = deformations_relative.cumsum(dim=-1)
         if self.relative:
             return deformations_relative
 
-        coordinate_grid = make_coordinate_grid((h, w), type=appearance_encoding.type())
+        coordinate_grid = make_coordinate_grid((h, w), type=deformations_relative.type())
         coordinate_grid = coordinate_grid.view(1, 1, h, w, 2)
 
         deformations_absolute = deformations_relative + coordinate_grid
@@ -128,3 +132,11 @@ class AffineDeformation(nn.Module):
         deformations_absolute = F.affine_grid(out, torch.Size((out.shape[0], 3, h, w)))
 
         return deformations_absolute
+
+
+class IdentityDeformation(nn.Module):
+    def forward(self, appearance_frame, motion_video, kp_appearance, kp_video):
+        bs, d, c, h, w = motion_video.shape
+        coordinate_grid = make_coordinate_grid((h, w), type=motion_video.type())
+        coordinate_grid = coordinate_grid.view(1, 1, h, w, 2)
+        return coordinate_grid

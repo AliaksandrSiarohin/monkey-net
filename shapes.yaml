@@ -1,31 +1,33 @@
-data_dir: data/shapes
-batch_size: 2
-spatial_size: 64
-num_channels: 3
-frames_per_sample: 4
+dataset_params:
+  offline_kp: False
+  offline_flow: False
+  image_shape: [64, 64, 3]
+  root_dir: data/shapes
 
-num_kp: 10
-kp_gaussian_sigma: 0.1
-kp_extractor_temperature: 0.1
+log_params:
+  log_freq: 1
+  cpk_freq: 100
 
-offline_kp: False
-offline_flow: True
-block_expansion: 16
-deformation_type: "predicted"
+model_params:
+  num_kp: 10
+  kp_gaussian_sigma: 0.1
+  kp_extractor_temperature: 0.1
+  block_expansion: 16
+  deformation_type: "predicted"
+  num_channels: 3
+  use_kp_embedding: True
 
-lr: 1.0e-3
-
-data_load_workers: 4
-log_freq: 20
-cpk_freq: 1000
-num_iter: 1500
+schedule_params:
+  num_epochs: [300, 100, 50, 50, 50]
+  frames_per_sample: [4, 8, 16, 32, 32]
+  lr: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3]
+  batch_size: [2, 2, 2, 2, 2]
 
 loss_weights:
   reconstruction: 50
-  reconstruction_deformed: 0
-  reconstruction_grad: 0
+  reconstruction_deformed: 50
+  reconstruction_grad: 50
   kp_movement: 0
-  tv: 0
-  tv_border: 0
-  reconstruction_flow: 50
-
+  tv: 10
+  tv_border: 1
+  reconstruction_flow: 0

@@ -38,7 +38,7 @@ class Normalize(object):
 class FramesDataset(Dataset):
     """Dataset of videos, represented as image of consequent frames"""
     def __init__(self, root_dir, transform=None, image_shape=(64, 64, 3), is_train=True, random_seed=0,
-                 offline_kp=True, offline_flow=True, frames_per_sample=32):
+                 offline_kp=True, offline_flow=True, frames_per_sample=1000000):
         """
         Args:
             root_dir (string): Path to folder with images
@@ -46,7 +46,7 @@ class FramesDataset(Dataset):
         self.root_dir = root_dir
         self.images = os.listdir(root_dir)
         self.transform = transform
-        self.image_shape = image_shape
+        self.image_shape = tuple(image_shape)
         self.offline_kp = offline_kp
         self.offline_flow = offline_flow
         self.frames_per_sample = frames_per_sample
@@ -60,6 +60,9 @@ class FramesDataset(Dataset):
 
     def __len__(self):
         return len(self.images)
+
+    def set_number_of_frames_per_sample(self, number_of_frames):
+        self.frames_per_sample = number_of_frames
 
     def compute_kp_for_shapes(self, video_array):
         kp_array = np.empty((video_array.shape[0], 4, 2), dtype='float32')

@@ -75,14 +75,15 @@ class Logger:
         self.save_cpk()
         self.log_file.close()
 
-    def log(self, it, loss_list, inp):
+    def save_values(self, loss_list):
         names, values = list(zip(*loss_list))
-        self.it = it
-
+        self.names = names
         self.loss_list.append(values)
 
+    def log(self, it, inp):
+        self.it = it
         if it % self.log_freq == 0:
-            self.log_scores(names)
+            self.log_scores(self.names)
             self.visualize_rec(inp)
             self.visualize_transfer(inp)
 

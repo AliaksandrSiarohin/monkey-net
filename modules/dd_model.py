@@ -3,7 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from modules.appearance_encoder import AppearanceEncoder
-from modules.deformation_module import PredictedDeformation, AffineDeformation
+from modules.deformation_module import PredictedDeformation, AffineDeformation, IdentityDeformation
 from modules.video_decoder import VideoDecoder
 from modules.kp_extractor import KPExtractor
 
@@ -15,22 +15,26 @@ class DDModel(nn.Module):
     Deformable disentangling model for videos.
     """
     def __init__(self, block_expansion, num_channels, num_kp, kp_gaussian_sigma, deformation_type,
-                 kp_extractor_temperature):
+                 kp_extractor_temperature, use_kp_embedding=True):
         super(DDModel, self).__init__()
 
-        assert deformation_type in ['affine', 'predicted']
+        assert deformation_type in ['affine', 'predicted', 'none']
 
         self.appearance_encoder = AppearanceEncoder(block_expansion=block_expansion, num_channels=num_channels)
 
         if deformation_type == 'affine':
             self.deformation_module = AffineDeformation(block_expansion=block_expansion, num_kp=num_kp)
-        else:
+        elif deformation_type == 'predicted':
             self.deformation_module = PredictedDeformation(block_expansion=block_expansion, kp_gaussian_sigma=kp_gaussian_sigma,
                                                            num_channels=num_channels, num_kp=num_kp)
+        else:
+            self.deformation_module = IdentityDeformation()
 
-        self.video_decoder = VideoDecoder(block_expansion=block_expansion, num_channels=num_channels)
+        self.video_decoder = VideoDecoder(block_expansion=block_expansion, num_channels=num_channels,
+                                          use_kp_embedding=use_kp_embedding)
         self.kp_extractor = KPExtractor(block_expansion=block_expansion, num_kp=num_kp, num_channels=num_channels,
                                         temperature=kp_extractor_temperature)
+        self.use_kp_embedding = use_kp_embedding
 
         self.kp_gaussian_sigma = kp_gaussian_sigma
 
@@ -62,6 +66,20 @@ class DDModel(nn.Module):
         _, num_kp, _ = kp.shape
         return kp.view(bs, d, num_kp, 2)
 
+    def make_kp_embedding(self, kp_video, kp_appearance, appearance_skips):
+        kp_video_diff = kp_video - kp_video[:, 0].unsqueeze(1)
+        kp_shifted = kp_video_diff + kp_appearance
+        bs, d, _, _ = kp_video.shape
+
+        kp_skips = []
+        for skip in appearance_skips:
+            kp_emb = kp2gaussian(kp_shifted, spatial_size=skip.shape[2:4], sigma=self.kp_gaussian_sigma)
+            kp_emb = kp_emb.view(bs, d, -1, skip.shape[2], skip.shape[3])
+            kp_emb = kp_emb.contiguous().permute(0, 2, 1, 3, 4)
+            kp_skips.append(kp_emb)
+
+        return kp_skips
+
     def predict(self, appearance_frame, motion_video, kp_appearance, kp_video):
         appearance_skips = self.appearance_encoder(appearance_frame)
 
@@ -72,13 +90,11 @@ class DDModel(nn.Module):
 
         deformed_skips = [self.deform_input(skip, deformations_absolute) for skip in appearance_skips]
 
-        kp_video_diff = kp_video - kp_video[:, 0].unsqueeze(1)
-        kp_shifted = kp_video_diff + kp_appearance
-
-        kp_skips = [kp2gaussian(kp_shifted, spatial_size=skip.shape[2:4], sigma=self.kp_gaussian_sigma).view(bs, d, -1, skip.shape[2], skip.shape[3]).contiguous().permute(0, 2, 1, 3, 4)
-                     for skip in appearance_skips]
-
-        skips = [torch.cat([a, b], dim=1) for a, b in zip(deformed_skips, kp_skips)]
+        if self.use_kp_embedding:
+            kp_skips = self.make_kp_embedding(kp_video, kp_appearance, appearance_skips)
+            skips = [torch.cat([a, b], dim=1) for a, b in zip(deformed_skips, kp_skips)]
+        else:
+            skips = deformed_skips
 
         video_deformed = self.deform_input(appearance_frame, deformations_absolute)
 
