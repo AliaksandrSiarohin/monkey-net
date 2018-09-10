@@ -96,7 +96,9 @@ def transfer(config, model, checkpoint, log_dir, dataset):
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
+    model = model.module
     for it, x in enumerate(dataloader):
+        x = {key: value.cuda() for key,value in x.items()}
         out = model.transfer(x)
         image = Visualizer().visualize_transfer(inp=x, out=out)
         imageio.mimsave(os.path.join(log_dir, str(it).zfill(8) + '.gif'), image)
@@ -118,8 +120,7 @@ if __name__ == "__main__":
     log_dir = os.path.join(opt.log_dir, opt.config.split('.')[0] + '-' + opt.mode + ' ' + strftime("%d-%m-%y %H:%M:%S", gmtime()))
 
     model = DDModel(**config['model_params'])
-    if opt.mode == 'train':
-        model = torch.nn.DataParallel(module=model, device_ids=opt.device_ids)
+    model = torch.nn.DataParallel(module=model, device_ids=opt.device_ids)
 
     data_transform = transforms.Compose([
         VideoToTensor(),
