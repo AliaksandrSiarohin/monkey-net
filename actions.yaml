@@ -4,6 +4,7 @@ dataset_params:
   image_shape: [64, 64, 3]
   root_dir: data/actions
   classes_list: data/actions.csv
+  reflect_pad_train: True
 
 log_params:
   log_freq: 1
