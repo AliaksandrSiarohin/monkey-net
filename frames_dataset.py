@@ -46,7 +46,7 @@ class FramesDataset(Dataset):
         self.offline_flow = offline_flow
         self.frames_per_sample = frames_per_sample
         self.classes_list = classes_list
-        self.reflect_pad_train = reflect_pad_train
+        self.reflect_pad = reflect_pad_train and is_train
 
         train_images, test_images = train_test_split(self.images, random_state=random_seed, test_size=0.2)
 
@@ -104,14 +104,13 @@ class FramesDataset(Dataset):
         video_array = np.moveaxis(video_array, 1, 2)
 
         frame_count = video_array.shape[0]
-        if self.reflect_pad_train:
+        if self.reflect_pad:
             if frame_count < self.frames_per_sample:
                 video_array = np.concatenate([video_array, video_array[::-1]], axis=0)
 
         first_frame = np.random.choice(max(1, frame_count - self.frames_per_sample + 1), size=1)[0]
 
         video_array = video_array[first_frame:(first_frame + self.frames_per_sample)]
-        print (video_array.shape)
 
         out = {'video_array': video_array}
 
