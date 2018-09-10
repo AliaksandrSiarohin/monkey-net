@@ -6,8 +6,8 @@ dataset_params:
   classes_list: data/actions.csv
 
 log_params:
-  log_freq: 1
-  cpk_freq: 100
+  log_freq: 50
+  cpk_freq: 1000
 
 model_params:
   num_kp: 10
@@ -21,7 +21,7 @@ model_params:
     max_features: 128
     number_of_blocks: 5
   deformation_module_params:
-    block_expansion: 16
+    block_expansion: 32
     max_features: 64
     number_of_blocks: 3
   main_module_params:
@@ -30,17 +30,17 @@ model_params:
     number_of_blocks: 5
 
 schedule_params:
-  num_epochs: [300, 200, 200, 200, 200]
-  frames_per_sample: [4, 8, 16, 32, 32]
-  lr: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3]
-  batch_size: [2, 2, 2, 2, 2]
+  num_epochs: [1000, 1000, 1000, 1000, 1000, 1000, 1000]
+  frames_per_sample: [4, 8, 16, 32, 50, 50, 50]
+  lr: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-4, 1.0e-5]
+  batch_size: [16, 16, 16, 16, 8, 8, 8]
 
 loss_weights:
   reconstruction: 50
-  reconstruction_deformed: 50
-  reconstruction_grad: 50
+  reconstruction_deformed: 0
+  reconstruction_grad: 0
   kp_movement: 0
-  tv: 10
+  tv: 0
   tv_border: 1
   reconstruction_flow: 0
 
