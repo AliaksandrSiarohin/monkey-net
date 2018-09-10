@@ -14,6 +14,7 @@ def reconstruction_loss(prediction, target, weight):
 def tv_loss(deformation, target, loss_weight, border_weight=1):
     if loss_weight == 0:
         return 0
+    deformation = deformation[..., :2]
     target = target.permute(0, 2, 1, 3, 4).contiguous()
     bs, d, c, h, w = target.shape
     target = target.view(bs * d, c, h, w)
@@ -44,19 +45,19 @@ def grad_reconstruction(deformation, target, weight):
     target_first_frame = target[:, 0, :, :, :]
 
     grad = compute_image_gradient(target_first_frame, padding=1)
-
-    grad = grad.unsqueeze(1).repeat(1, d, 1, 1, 1).view(bs * d, 2 * c, h, w)
-    deformation = deformation.view(bs * d, h, w, 2)
-
+    grad = grad.unsqueeze(2)
     deformed_grad = F.grid_sample(grad, deformation)
 
     true_grad = compute_image_gradient(target.view(bs * d, c, h, w), padding=1)
+    true_grad = true_grad.view(bs, d, -1, h, w).permute(0, 2, 1, 3, 4)
     return reconstruction_loss(deformed_grad, true_grad, weight)
 
 
 def flow_reconstruction(deformation, flow, weight):
     if weight == 0 or flow is None:
         return 0
+
+    deformation = deformation[..., :2]
     bs, d, h, w, _ = deformation.shape
     deformation = deformation.view(bs, d, h, w, 2)
     grid = make_coordinate_grid((h, w), deformation.type())
@@ -71,6 +72,7 @@ def kp_movement_loss(kp_video, deformation, weight):
     kp_video = kp_video.detach()
     if weight == 0:
         return 0
+    deformation = deformation[..., :2]
     bs, d, h, w, _ = deformation.shape
     deformation = deformation.view(-1, h * w, 2)
     bs, d, num_kp, _ = kp_video.shape

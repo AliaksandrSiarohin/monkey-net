@@ -49,8 +49,6 @@ def train(config, model, checkpoint, log_dir, dataset):
                 optimizer.zero_grad()
 
                 logger.save_values(loss_list=loss_list)
-                # if i % 50 == 0:
-                #     logger.log(it, inp=x)
 
             if it in epochs_milestones:
                 schedule_iter = np.searchsorted(epochs_milestones, it, side='right')
@@ -99,7 +97,7 @@ def transfer(config, model, checkpoint, log_dir, dataset):
         os.makedirs(log_dir)
 
     for it, x in enumerate(dataloader):
-        out = model(x, True)
+        out = model.transfer(x)
         image = Visualizer().visualize_transfer(inp=x, out=out)
         imageio.mimsave(os.path.join(log_dir, str(it).zfill(8) + '.gif'), image)
 
@@ -120,7 +118,8 @@ if __name__ == "__main__":
     log_dir = os.path.join(opt.log_dir, opt.config.split('.')[0] + '-' + opt.mode + ' ' + strftime("%d-%m-%y %H:%M:%S", gmtime()))
 
     model = DDModel(**config['model_params'])
-    model = torch.nn.DataParallel(module=model, device_ids=opt.device_ids)
+    if opt.mode == 'train':
+        model = torch.nn.DataParallel(module=model, device_ids=opt.device_ids)
 
     data_transform = transforms.Compose([
         VideoToTensor(),

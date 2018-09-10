@@ -3,6 +3,7 @@ dataset_params:
   offline_flow: False
   image_shape: [64, 64, 3]
   root_dir: data/actions
+  classes_list: data/actions.csv
 
 log_params:
   log_freq: 1
@@ -11,11 +12,22 @@ log_params:
 model_params:
   num_kp: 10
   kp_gaussian_sigma: 0.1
-  kp_extractor_temperature: 0.1
-  block_expansion: 16
-  deformation_type: "none"
+  deformation_type: "predicted"
   num_channels: 3
   use_kp_embedding: True
+  kp_extractor_module_params:
+    temperature: 0.1
+    block_expansion: 16
+    max_features: 128
+    number_of_blocks: 5
+  deformation_module_params:
+    block_expansion: 16
+    max_features: 64
+    number_of_blocks: 3
+  main_module_params:
+    block_expansion: 16
+    max_features: 128
+    number_of_blocks: 5
 
 schedule_params:
   num_epochs: [300, 200, 200, 200, 200]

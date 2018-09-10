@@ -37,25 +37,6 @@ class Logger:
         image = Visualizer().visualize_reconstruction(inp, out)
         imageio.mimsave(os.path.join(self.log_dir, "%s-rec.gif" % str(self.it).zfill(self.fill_counter)), image)
 
-    def visualize_transfer(self, inp):
-        transfer_inp = {}
-
-        bs = inp['video_array'].shape[0]
-
-        transfer_inp['first_video_array'] = inp['video_array']
-        second_video_array = inp['video_array'][range(bs)[::-1]]
-        transfer_inp['second_video_array'] = second_video_array
-
-        if 'kp_array' in inp:
-            transfer_inp['first_kp_array'] = inp['kp_array']
-            second_kp_array = inp['kp_array'][range(bs)[::-1]]
-            transfer_inp['second_kp_array'] = second_kp_array
-
-        out = self.model(transfer_inp, True)
-        image = Visualizer().visualize_transfer(transfer_inp, out)
-
-        imageio.mimsave(os.path.join(self.log_dir, "%s-trans.gif" % str(self.it).zfill(self.fill_counter)), image)
-
     def save_cpk(self):
         d = {"model": self.model.state_dict(), "optimizer": self.optimizer.state_dict(), "iter": self.it}
         torch.save(d, os.path.join(self.log_dir, '%s-checkpoint.pth.tar' % str(self.it).zfill(self.fill_counter)))
@@ -85,7 +66,7 @@ class Logger:
         if it % self.log_freq == 0:
             self.log_scores(self.names)
             self.visualize_rec(inp)
-            self.visualize_transfer(inp)
+            #self.visualize_transfer(inp)
 
         if it % self.cpk_freq == 0:
             self.save_cpk()

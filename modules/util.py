@@ -111,6 +111,73 @@ class DownBlock3D(nn.Module):
         return out
 
 
+class Encoder(nn.Module):
+    """
+    Hourglass Encoder
+    """
+    def __init__(self, block_expansion, in_features, number_of_blocks=3, max_features=256, dim=2):
+        super(Encoder, self).__init__()
+
+        down_blocks = []
+
+        kernel_size = (3, 3, 3) if dim == 3 else (1, 3, 3)
+        padding = (1, 1, 1) if dim == 3 else (0, 1, 1)
+        for i in range(number_of_blocks):
+            down_blocks.append(DownBlock3D(in_features if i == 0 else min(max_features, block_expansion * (2 ** i)),
+                                           min(max_features, block_expansion * (2 ** (i + 1))),
+                                           kernel_size=kernel_size, padding=padding))
+        self.down_blocks = nn.ModuleList(down_blocks)
+
+    def forward(self, x):
+        outs = [x]
+
+        for down_block in self.down_blocks:
+            outs.append(down_block(outs[-1]))
+        return outs
+
+
+class Decoder(nn.Module):
+    """
+    Hourglass Decoder
+    """
+    def __init__(self, block_expansion, in_features, out_features, number_of_blocks=3, max_features=256, dim=2,
+                 additional_features_for_block=0):
+        super(Decoder, self).__init__()
+        kernel_size = (3, 3, 3) if dim == 3 else (1, 3, 3)
+        padding = (1, 1, 1) if dim == 3 else (0, 1, 1)
+
+        up_blocks = []
+
+        for i in range(number_of_blocks)[::-1]:
+            up_blocks.append(UpBlock3D((1 if i == number_of_blocks - 1 else 2) * min(max_features, block_expansion * (2 ** (i + 1))) + additional_features_for_block,
+                                       min(max_features, block_expansion * (2 ** i)),
+                                       kernel_size=kernel_size, padding=padding))
+
+        self.up_blocks = nn.ModuleList(up_blocks)
+        self.conv = nn.Conv3d(in_channels=block_expansion + in_features + additional_features_for_block,
+                              out_channels=out_features, kernel_size=kernel_size, padding=padding)
+
+    def forward(self, x):
+        out = x.pop()
+        for up_block in self.up_blocks:
+            out = up_block(out)
+            out = torch.cat([out, x.pop()], dim=1)
+        return self.conv(out)
+
+
+class Hourglass(nn.Module):
+    """
+    Hourglass architecture.
+    """
+    def __init__(self, block_expansion, in_features, out_features, number_of_blocks=3, max_features=256, dim=2):
+        super(Hourglass, self).__init__()
+        self.encoder = Encoder(block_expansion, in_features, number_of_blocks, max_features, dim)
+        self.decoder = Decoder(block_expansion, in_features, out_features, number_of_blocks, max_features, dim)
+
+    def forward(self, x):
+        return self.decoder(self.encoder(x))
+
+
 def kp2gaussian(kp, spatial_size, sigma):
     coordinate_grid = make_coordinate_grid(spatial_size, kp.type())
 
@@ -132,36 +199,7 @@ def kp2gaussian(kp, spatial_size, sigma):
 
     return out
 
-# class KP2Gaussian(nn.Module):
-#     """
-#     Represent normalized[0, 1] coordinates keypoints as feature map
-#     """
-#     def __init__(self, spatial_size, sigma):
-#         super(KP2Gaussian, self).__init__()
-#         self.spatial_size = spatial_size
-#         self.sigma = sigma
-#
-#     def forward(self, kp):
-#         # Preprocess coordinate grid
-#         coordinate_grid = make_coordinate_grid(self.spatial_size, kp.type())
-#
-#         number_of_leading_dimensions = len(kp.shape) - 1
-#         shape = (1, ) * number_of_leading_dimensions + coordinate_grid.shape
-#
-#         coordinate_grid = coordinate_grid.view(*shape)
-#         repeats = kp.shape[:number_of_leading_dimensions] + (1, 1, 1)
-#         coordinate_grid = coordinate_grid.repeat(*repeats)
-#
-#         # Preprocess kp shape
-#         shape = kp.shape[:number_of_leading_dimensions] + (1, 1, 2)
-#         kp = kp.view(*shape)
-#
-#         # Computing gaussian
-#         squares = (coordinate_grid - kp) ** 2
-#         sum = torch.sum(squares, dim=-1)
-#         out = torch.exp(-sum / (2 * self.sigma ** 2))
-#
-#         return out
+
 
 
 if __name__ == "__main__":

@@ -6,9 +6,8 @@ from skimage.measure import label, regionprops
 
 import numpy as np
 from torch.utils.data import Dataset
-import imageio
-
-from skimage.transform import estimate_transform, warp_coords
+import pandas as pd
+from itertools import permutations
 
 
 class VideoToTensor(object):
@@ -38,7 +37,7 @@ class Normalize(object):
 class FramesDataset(Dataset):
     """Dataset of videos, represented as image of consequent frames"""
     def __init__(self, root_dir, transform=None, image_shape=(64, 64, 3), is_train=True, random_seed=0,
-                 offline_kp=True, offline_flow=True, frames_per_sample=1000000):
+                 offline_kp=True, offline_flow=True, classes_list=None, frames_per_sample=100000):
         """
         Args:
             root_dir (string): Path to folder with images
@@ -50,6 +49,7 @@ class FramesDataset(Dataset):
         self.offline_kp = offline_kp
         self.offline_flow = offline_flow
         self.frames_per_sample = frames_per_sample
+        self.classes_list = classes_list
 
         train_images, test_images = train_test_split(self.images, random_state=random_seed, test_size=0.2)
 
@@ -130,17 +130,34 @@ class PairedDataset(Dataset):
     """
     Dataset of pairs.
     """
-    def __init__(self, initial_dataset, number_of_pairs, seed = 0):
+    def __init__(self, initial_dataset, number_of_pairs, seed=0):
         self.initial_dataset = initial_dataset
+        classes_list = self.initial_dataset.classes_list
 
-        max_idx = min(number_of_pairs, len(initial_dataset))
-        nx, ny = max_idx, max_idx
-        xy = np.mgrid[:nx,:ny].reshape(2, -1).T
+        if classes_list is None:
+            max_idx = min(number_of_pairs, len(initial_dataset))
+            nx, ny = max_idx, max_idx
+            xy = np.mgrid[:nx,:ny].reshape(2, -1).T
+        else:
+            images = self.initial_dataset.images
+            name_to_index = {name:index for index, name in enumerate(images)}
+            classes = pd.read_csv(classes_list)
+            classes = classes[classes['name'].isin(images)]
+            names = classes['name']
+            labels = classes['cls']
+
+            name_pairs = []
+            for cls in np.unique(labels):
+                name_pairs += list(permutations(names[labels == cls], 2))
+
+            xy = []
+            for first, second in name_pairs:
+                xy.append((name_to_index[first], name_to_index[second]))
+
+            xy = np.array(xy)
 
         number_of_pairs = min(xy.shape[0], number_of_pairs)
-
         np.random.seed(seed)
-
         self.pairs = xy.take(np.random.choice(xy.shape[0], number_of_pairs, replace=False), axis=0)
 
     def __len__(self):
