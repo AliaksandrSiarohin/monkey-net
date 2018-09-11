@@ -37,39 +37,31 @@ def make_coordinate_grid(spatial_size, type):
 
     return meshed
 
-class DownBlock2D(nn.Module):
+
+class ResBlock3D(nn.Module):
     """
-    Simple block for processing each frame separately (encoder).
+    Res block, preserve spatial resolution.
     """
-    def __init__(self, in_features, out_features):
-        super(DownBlock2D, self).__init__()
-        self.conv = nn.Conv2d(in_channels=in_features, out_channels=out_features, kernel_size=3, padding=1)
-        self.norm = nn.InstanceNorm2d(out_features, affine=True)
-        self.pool = nn.AvgPool2d(2, stride=2)
+    def __init__(self, in_features, merge='sum'):
+        super(ResBlock3D, self).__init__()
+        assert merge in ['cat', 'sum']
+        self.conv1 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=3, padding=1)
+        self.norm1 = nn.InstanceNorm3d(in_features, affine=True)
+        self.norm2 = nn.InstanceNorm3d(in_features, affine=True)
+        self.merge = merge
 
     def forward(self, x):
-        out = self.conv(x)
-        out = self.norm(out)
+        out = self.norm1(x)
         out = F.relu(out)
-        out = self.pool(out)
-        return out
-
-
-class UpBlock2D(nn.Module):
-    """
-    Simple block for processing each frame separately (decoder).
-    """
-    def __init__(self, in_features, out_features):
-        super(UpBlock2D, self).__init__()
-
-        self.conv = nn.Conv2d(in_channels=in_features, out_channels=out_features, kernel_size=3, padding=1)
-        self.norm = nn.InstanceNorm2d(out_features, affine=True)
-
-    def forward(self, x):
-        out = F.interpolate(x, scale_factor=2)
-        out = self.conv(out)
-        out = self.norm(out)
+        out = self.conv1(out)
+        out = self.norm2(out)
         out = F.relu(out)
+        out = self.conv2(out)
+        if self.merge == 'sum':
+            out += x
+        else:
+            out = torch.cat([out, x], dim=1)
         return out
 
 
@@ -200,6 +192,16 @@ def kp2gaussian(kp, spatial_size, sigma):
     return out
 
 
+def gaussian2kp(feature_map, temperature):
+    final_shape = feature_map.shape
+    out = feature_map.view(final_shape[0], final_shape[1], final_shape[2], -1)
+    heatmap = F.softmax(out / temperature, dim=3)
+    out = heatmap.view(final_shape + (1, ))
+
+    grid = make_coordinate_grid(final_shape[3:], feature_map.type()).unsqueeze_(0).unsqueeze_(0).unsqueeze_(0)
+
+    out = (out * grid).sum(dim=(3, 4))
+    return out.permute(0, 2, 1, 3)
 
 
 if __name__ == "__main__":

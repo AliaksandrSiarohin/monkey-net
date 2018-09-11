@@ -37,9 +37,11 @@ schedule_params:
 
 loss_weights:
   reconstruction: 50
-  reconstruction_deformed: 50
-  reconstruction_grad: 50
+  reconstruction_deformed: 0
+  reconstruction_grad: 0
   kp_movement: 0
-  tv: 10
-  tv_border: 1
+  tv: 0
+  tv_border: 0
   reconstruction_flow: 0
+  kp_stationary: 1
+  allowed_movement: 0.1

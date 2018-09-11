@@ -70,9 +70,14 @@ def test(config, model, checkpoint, log_dir, dataset):
         raise AttributeError("Checkpoint should be specified for mode='test'.")
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=1)
 
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
     loss_list = []
     for it, x in tqdm(enumerate(dataloader)):
         out = model(x)
+        image = Visualizer().visualize_reconstruction(x, out)
+        imageio.mimsave(os.path.join(log_dir, str(it).zfill(8) + '.gif'), image)
         out = {key: value.data for key, value in out.items()}
 
         loss, losses = total_loss(x, out, config['loss_weights'])
@@ -97,7 +102,7 @@ def transfer(config, model, checkpoint, log_dir, dataset):
         os.makedirs(log_dir)
 
     model = model.module
-    for it, x in enumerate(dataloader):
+    for it, x in tqdm(enumerate(dataloader)):
         x = {key: value.cuda() for key,value in x.items()}
         out = model.transfer(x)
         image = Visualizer().visualize_transfer(inp=x, out=out)

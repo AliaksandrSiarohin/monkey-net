@@ -33,7 +33,7 @@ model_params:
 schedule_params:
   num_epochs: [1000, 1000, 1000, 1000, 1000, 1000, 1000]
   frames_per_sample: [4, 8, 16, 32, 64, 100, 100]
-  lr: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-4, 1.0e-5]
+  lr: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-4]
   batch_size: [16, 16, 16, 8, 4, 2, 2]
 
 loss_weights:
@@ -44,4 +44,5 @@ loss_weights:
   tv: 0
   tv_border: 1
   reconstruction_flow: 0
-
+  kp_stationary: 1
+  allowed_movement: 0.1

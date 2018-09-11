@@ -1,6 +1,6 @@
 from torch import nn
 import torch.nn.functional as F
-from modules.util import make_coordinate_grid, Hourglass
+from modules.util import gaussian2kp, Hourglass
 
 
 class KPExtractor(nn.Module):
@@ -17,13 +17,6 @@ class KPExtractor(nn.Module):
     def forward(self, x):
         out = self.predictor(x)
 
-        final_shape = out.shape
-        out = out.view(final_shape[0], final_shape[1], final_shape[2], -1)
-        heatmap = F.softmax(out / self.temperature, dim=3)
-        out = heatmap.view(final_shape + (1, ))
+        out = gaussian2kp(out, self.temperature)
 
-        grid = make_coordinate_grid(final_shape[3:], x.type()).unsqueeze_(0).unsqueeze_(0).unsqueeze_(0)
-
-        out = (out * grid).sum(dim=(3, 4))
-
-        return out.permute(0, 2, 1, 3)
+        return out

@@ -100,6 +100,13 @@ def kp_movement_loss(kp_video, deformation, weight):
     return weight * total
 
 
+def kp_stationary_loss(kp_video, allowed_movement, weight):
+    kp_video_diff = torch.cat([kp_video[:, 0].unsqueeze(1), kp_video[:, :-1]], dim=1) - kp_video
+    kp_video_diff = torch.abs(kp_video_diff)
+    penalty = torch.max(torch.zeros_like(kp_video_diff), kp_video_diff - allowed_movement)
+    return weight * penalty.mean()
+
+
 def total_loss(inp, out, loss_weights):
     video_gt = inp['video_array']
 
@@ -119,13 +126,14 @@ def total_loss(inp, out, loss_weights):
         flow = None
 
     loss_names = ["reconstruction", "reconstruction_deformed", "kp_movement", "tv", "reconstruction_grad",
-                  "flow_reconstruction"]
+                  "flow_reconstruction", "kp_stationary"]
     loss_values = [reconstruction_loss(video_prediction, video_gt, loss_weights["reconstruction"]),
                    reconstruction_loss(video_deformed,   video_gt, loss_weights["reconstruction_deformed"]),
                    kp_movement_loss(kp, deformation, loss_weights["kp_movement"]),
                    tv_loss(deformation, video_gt, loss_weights["tv"], loss_weights['tv_border']),
                    grad_reconstruction(deformation, video_gt, loss_weights["reconstruction_grad"]),
-                   flow_reconstruction(deformation, flow, loss_weights['reconstruction_flow'])]
+                   flow_reconstruction(deformation, flow, loss_weights['reconstruction_flow']),
+                   kp_stationary_loss(kp, loss_weights['allowed_movement'], loss_weights['kp_stationary'])]
 
     total = sum(loss_values)
 
