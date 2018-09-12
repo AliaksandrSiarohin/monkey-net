@@ -105,8 +105,7 @@ class FramesDataset(Dataset):
 
         frame_count = video_array.shape[0]
         if self.reflect_pad:
-            if frame_count < self.frames_per_sample:
-                video_array = np.concatenate([video_array, video_array[::-1]], axis=0)
+            video_array = np.concatenate([video_array, video_array[::-1]], axis=0)
 
         first_frame = np.random.choice(max(1, frame_count - self.frames_per_sample + 1), size=1)[0]
 

@@ -69,7 +69,7 @@ def flow_reconstruction(deformation, flow, weight):
 
 
 def kp_movement_loss(kp_video, deformation, weight):
-    kp_video = kp_video.detach()
+    kp_video = kp_video['mean']
     if weight == 0:
         return 0
     deformation = deformation[..., :2]
@@ -101,6 +101,7 @@ def kp_movement_loss(kp_video, deformation, weight):
 
 
 def kp_stationary_loss(kp_video, allowed_movement, weight):
+    kp_video = kp_video['mean']
     kp_video_diff = torch.cat([kp_video[:, 0].unsqueeze(1), kp_video[:, :-1]], dim=1) - kp_video
     kp_video_diff = torch.abs(kp_video_diff)
     penalty = torch.max(torch.zeros_like(kp_video_diff), kp_video_diff - allowed_movement)

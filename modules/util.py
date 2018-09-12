@@ -170,59 +170,16 @@ class Hourglass(nn.Module):
         return self.decoder(self.encoder(x))
 
 
-def kp2gaussian(kp, spatial_size, sigma):
-    coordinate_grid = make_coordinate_grid(spatial_size, kp.type())
+def matrix_inverse(batch_of_matrix):
+    init_shape = batch_of_matrix.shape
+    a = batch_of_matrix[..., 0, 0].unsqueeze(-1)
+    b = batch_of_matrix[..., 0, 1].unsqueeze(-1)
+    c = batch_of_matrix[..., 1, 0].unsqueeze(-1)
+    d = batch_of_matrix[..., 1, 1].unsqueeze(-1)
 
-    number_of_leading_dimensions = len(kp.shape) - 1
-    shape = (1, ) * number_of_leading_dimensions + coordinate_grid.shape
+    det = a * d - b * c
+    out = torch.cat([d, -b, -c, a], dim=-1)
+    out /= det
 
-    coordinate_grid = coordinate_grid.view(*shape)
-    repeats = kp.shape[:number_of_leading_dimensions] + (1, 1, 1)
-    coordinate_grid = coordinate_grid.repeat(*repeats)
+    return out.view(init_shape)
 
-    # Preprocess kp shape
-    shape = kp.shape[:number_of_leading_dimensions] + (1, 1, 2)
-    kp = kp.view(*shape)
-
-    # Computing gaussian
-    squares = (coordinate_grid - kp) ** 2
-    sum = torch.sum(squares, dim=-1)
-    out = torch.exp(-sum / (2 * sigma ** 2))
-
-    return out
-
-
-def gaussian2kp(feature_map, temperature):
-    final_shape = feature_map.shape
-    out = feature_map.view(final_shape[0], final_shape[1], final_shape[2], -1)
-    heatmap = F.softmax(out / temperature, dim=3)
-    out = heatmap.view(final_shape + (1, ))
-
-    grid = make_coordinate_grid(final_shape[3:], feature_map.type()).unsqueeze_(0).unsqueeze_(0).unsqueeze_(0)
-
-    out = (out * grid).sum(dim=(3, 4))
-    return out.permute(0, 2, 1, 3)
-
-
-if __name__ == "__main__":
-    import imageio
-
-    kp_array = np.zeros((2, 1, 64, 2), dtype='float32')
-
-    for i in range(10):
-        kp_array[0, :, i, 0] = 6 * i / 64
-        kp_array[0, :, i, 1] = 1 * i / 128
-
-        kp_array[1, :, i, 0] = 1 * i / 64
-        kp_array[1, :, i, 1] = 12 * i / 128
-
-    kp_array = 2 * kp_array - 1
-
-    tkp = torch.from_numpy(kp_array)
-
-    out = kp2gaussian(tkp, (128, 64), 0.1)
-    out = out.numpy()
-
-    out = 1 - np.squeeze(out)
-    imageio.mimsave('movie1.gif', out[0])
-    imageio.mimsave('movie2.gif', out[1])

@@ -12,7 +12,7 @@ log_params:
 
 model_params:
   num_kp: 10
-  kp_gaussian_sigma: 0.1
+  kp_variance: 0.1
   deformation_type: "predicted"
   num_channels: 3
   use_kp_embedding: True
@@ -25,10 +25,19 @@ model_params:
     block_expansion: 32
     max_features: 64
     number_of_blocks: 3
+    cumsum: False
   main_module_params:
     block_expansion: 16
     max_features: 128
     number_of_blocks: 5
+  deformation_embedding_params:
+    use_difference: True
+    difference_type: "absolute"
+    features_per_kp: 4
+  main_embedding_params:
+    use_difference: False
+    difference_type: "absolute"
+    features_per_kp: 1
 
 schedule_params:
   num_epochs: [1000, 500, 300, 100, 100, 100, 1000]
