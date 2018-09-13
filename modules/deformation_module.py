@@ -8,7 +8,7 @@ class PredictedDeformation(nn.Module):
     """
     Deformation module receive first frame and keypoints difference heatmap. It has hourglass architecture.
     """
-    def __init__(self, block_expansion, number_of_blocks, max_features, embedding_features, cumsum, relative=False):
+    def __init__(self, block_expansion, number_of_blocks, max_features, embedding_features, cumsum=False, relative=False):
         super(PredictedDeformation, self).__init__()
         self.predictor = Hourglass(block_expansion=block_expansion, in_features=embedding_features, out_features=2,
                                    max_features=max_features, dim=3, number_of_blocks=number_of_blocks)

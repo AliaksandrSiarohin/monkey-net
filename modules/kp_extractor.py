@@ -40,25 +40,24 @@ def kp2gaussian(kp, spatial_size, kp_variance='learned'):
     return out
 
 
-def gaussian2kp(feature_map, kp_variance='learned'):
-    shape = feature_map.shape
-    out = feature_map.view(shape + (1, ))
-    grid = make_coordinate_grid(shape[3:], feature_map.type()).unsqueeze_(0).unsqueeze_(0).unsqueeze_(0)
+def gaussian2kp(heatmap, kp_variance='learned'):
+    shape = heatmap.shape
+    heatmap = heatmap.unsqueeze(-1)
+    grid = make_coordinate_grid(shape[3:], heatmap.type()).unsqueeze_(0).unsqueeze_(0).unsqueeze_(0)
 
-    mean = (out * grid).sum(dim=(3, 4))
-    mean = mean.permute(0, 2, 1, 3)
+    mean = (heatmap * grid).sum(dim=(3, 4))
 
-    out = {'mean' : mean}
+    kp = {'mean': mean.permute(0, 2, 1, 3)}
 
     if kp_variance == 'learned':
         mean_sub = grid - mean.unsqueeze(-2).unsqueeze(-2)
         var = torch.matmul(mean_sub.unsqueeze(-1), mean_sub.unsqueeze(-2))
-        var = var * out.unsqueeze(-1)
+        var = var * heatmap.unsqueeze(-1)
         var = var.sum(dim=(3, 4))
         var = var.permute(0, 2, 1, 3, 4)
-        out['var'] = var
+        kp['var'] = var
 
-    return out
+    return kp
 
 
 class KPExtractor(nn.Module):
@@ -91,14 +90,18 @@ class MovementEmbeddingModule(nn.Module):
     """
     Produce embedding for movement
     """
-    def __init__(self, num_kp, features_per_kp, use_difference, difference_type, kp_variance):
+    def __init__(self, num_kp, use_difference, kp_variance, learnable=False, features_per_kp=1, difference_type='absolute'):
         super(MovementEmbeddingModule, self).__init__()
 
         assert difference_type in ['absolute', 'relative']
 
-        self.out_channels = features_per_kp * num_kp
-        self.conv = nn.Conv2d((1 + 2 * use_difference) * num_kp, self.out_channels, kernel_size=1, groups=num_kp)
+        if learnable:
+            self.out_channels = features_per_kp * num_kp
+            self.conv = nn.Conv2d((1 + 2 * use_difference) * num_kp, self.out_channels, kernel_size=1, groups=num_kp)
+        else:
+            self.out_channels = (1 + 2 * use_difference) * num_kp
 
+        self.learnable = learnable
         self.kp_variance = kp_variance
         self.difference_type = difference_type
         self.use_difference = use_difference
@@ -109,8 +112,8 @@ class MovementEmbeddingModule(nn.Module):
         out = {'mean': kp_mean}
 
         if self.kp_variance == 'learned':
-            kp_var = torch.matmul(kp_video['var'], matrix_inverse(kp_video['var'[:, 0:1]]))
-            kp_var = torch.matmul(kp_var, kp_appearance)
+            kp_var = torch.matmul(kp_video['var'], matrix_inverse(kp_video['var'][:, 0:1]))
+            kp_var = torch.matmul(kp_var, kp_appearance['var'])
             out['var'] = kp_var
 
         if self.difference_type == 'relative':
@@ -136,10 +139,12 @@ class MovementEmbeddingModule(nn.Module):
             movement_encoding = movement_encoding.unsqueeze(3)
 
             movement_encoding = torch.cat([movement_encoding, kp_video_diff], dim=3)
+            movement_encoding = movement_encoding.view(bs, d, -1, h, w)
 
-        movement_encoding = movement_encoding.view(bs * d, -1, h, w)
-        movement_encoding = self.conv(movement_encoding)
-        movement_encoding = movement_encoding.view(bs, d, -1, h, w)
+        if self.learnable:
+            movement_encoding = movement_encoding.view(bs * d, -1, h, w)
+            movement_encoding = self.conv(movement_encoding)
+            movement_encoding = movement_encoding.view(bs, d, -1, h, w)
 
         return movement_encoding.permute(0, 2, 1, 3, 4)
 

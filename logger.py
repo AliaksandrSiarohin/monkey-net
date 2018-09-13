@@ -136,7 +136,7 @@ class Visualizer:
             kp_emb = kp2gaussian(out['kp_array'], spatial_size=out_video_batch.shape[-2:], kp_variance=0.003)
         kp_emb = kp_emb.permute(0, 2, 1, 3, 4).max(dim=1, keepdim=True)[0].repeat(1, out_video_batch.shape[1], 1, 1, 1)
         kp_emb = kp_emb.data.cpu().numpy()
-        kp_emb /= np.max(kp_emb)
+        kp_emb /= np.max(kp_emb, axis=(3,4), keepdims=True)
 
         out_video_batch = np.transpose(out_video_batch, [0, 2, 3, 4, 1])
         gt_video_batch = np.transpose(gt_video_batch, [0, 2, 3, 4, 1])

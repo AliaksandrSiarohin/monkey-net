@@ -11,12 +11,13 @@ log_params:
 
 model_params:
   num_kp: 10
-  kp_variance: 0.1
+  kp_variance: 'learned'
   deformation_type: "predicted"
   num_channels: 3
   use_kp_embedding: True
+  detach_deformation: True
   kp_extractor_module_params:
-    temperature: 0.1
+    temperature: 1
     block_expansion: 16
     max_features: 128
     number_of_blocks: 5
@@ -33,10 +34,10 @@ model_params:
     use_difference: True
     difference_type: "absolute"
     features_per_kp: 4
+    learnable: True
   main_embedding_params:
     use_difference: False
-    difference_type: "absolute"
-    features_per_kp: 1
+    learnable: False
 
 schedule_params:
   num_epochs: [1, 1, 1, 1, 1]
@@ -46,7 +47,7 @@ schedule_params:
 
 loss_weights:
   reconstruction: 50
-  reconstruction_deformed: 50
+  reconstruction_deformed: 0
   reconstruction_grad: 0
   kp_movement: 0
   tv: 0
