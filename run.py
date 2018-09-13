@@ -14,7 +14,9 @@ from modules.losses import total_loss
 
 import numpy as np
 import imageio
+from torch.autograd import Variable
 
+import warnings
 
 def set_optimizer_lr(optimizer, lr):
     for param_group in optimizer.param_groups:
@@ -39,14 +41,22 @@ def train(config, model, checkpoint, log_dir, dataset):
     with Logger(model=model, optimizer=optimizer, log_dir=log_dir, **config['log_params']) as logger:
         for it in trange(start_iter, epochs_milestones[-1]):
             for i, x in enumerate(dataloader):
+                x = {k: Variable(x[k], requires_grad=True) for k,v in x.items()}
                 out = model(x)
+
                 loss, loss_list = total_loss(x, out, config['loss_weights'])
 
                 loss.backward()
-                optimizer.step()
-                optimizer.zero_grad()
+                if torch.isnan(x['video_array'].grad).byte().any():
+                    warnings.warn("Nan in gradient", Warning)
+                    optimizer.zero_grad()
+                else:
+                    optimizer.step()
+                    optimizer.zero_grad()
 
                 logger.save_values(loss_list=loss_list)
+
+                #logger.log(i, inp=x)
 
             if it in epochs_milestones:
                 schedule_iter = np.searchsorted(epochs_milestones, it, side='right')
