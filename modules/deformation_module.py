@@ -25,7 +25,7 @@ class PredictedDeformation(nn.Module):
         deformations_relative = deformations_relative.permute(0, 2, 3, 4, 1)
 
         if self.cumsum:
-            deformations_relative = deformations_relative.cumsum(dim=-1)
+            deformations_relative = deformations_relative.cumsum(dim=1)
 
         if self.relative:
             deformation = deformations_relative
@@ -70,7 +70,7 @@ class AffineDeformation(nn.Module):
             coordinate_grid = make_coordinate_grid((h, w), type=deformations_absolute.type())
             coordinate_grid = coordinate_grid.view(1, 1, h, w, 2)
             deformation_relative = deformations_absolute - coordinate_grid
-            deformation_relative = deformation_relative.cumsum(dim=-1)
+            deformation_relative = deformation_relative.cumsum(dim=1)
             deformations_absolute = deformation_relative + coordinate_grid
 
         z_coordinate = torch.zeros(deformations_absolute.shape[:-1] + (1, )).type(deformations_absolute.type())
