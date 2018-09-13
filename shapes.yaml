@@ -1,9 +1,19 @@
 dataset_params:
-  offline_kp: False
-  offline_flow: False
   image_shape: [64, 64, 3]
   root_dir: data/shapes
-  reflect_pad_train: False
+  augmentation_param:
+    flip_param: True
+    rotation_param:
+      degrees: [-10, 10]
+    resize_param:
+      ratio : [1, 1.25]
+      interpolation: 'nearest'
+    select_frames_param:
+      reflect_pad_time: True
+      consequent: True
+    crop_param:
+      size: [64, 64]
+
 
 log_params:
   log_freq: 20
@@ -11,13 +21,13 @@ log_params:
 
 model_params:
   num_kp: 10
-  kp_variance: 'learned'
+  kp_variance: 0.01
   deformation_type: "predicted"
   num_channels: 3
   use_kp_embedding: True
   detach_deformation: True
   kp_extractor_module_params:
-    temperature: 1
+    temperature: 0.1
     block_expansion: 16
     max_features: 128
     number_of_blocks: 5
@@ -34,7 +44,7 @@ model_params:
     use_difference: True
     difference_type: "absolute"
     features_per_kp: 4
-    learnable: True
+    learnable: False
   main_embedding_params:
     use_difference: False
     learnable: False
@@ -47,7 +57,7 @@ schedule_params:
 
 loss_weights:
   reconstruction: 50
-  reconstruction_deformed: 0
+  reconstruction_deformed: 50
   reconstruction_grad: 0
   kp_movement: 0
   tv: 0

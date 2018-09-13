@@ -1,10 +1,19 @@
 dataset_params:
-  offline_kp: False
-  offline_flow: False
   image_shape: [64, 64, 3]
   root_dir: data/actions
   classes_list: data/actions.csv
-  reflect_pad_train: True
+  augmentation_param:
+    flip_param: True
+    rotation_param:
+      degrees: [-10, 10]
+    resize_param:
+      ratio : [1, 1.25]
+      interpolation: 'nearest'
+    select_frames_param:
+      reflect_pad_time: True
+      consequent: True
+    crop_param:
+      size: [64, 64]
 
 log_params:
   log_freq: 50
@@ -12,7 +21,7 @@ log_params:
 
 model_params:
   num_kp: 10
-  kp_variance: 'learned'
+  kp_variance: 0.01
   deformation_type: "predicted"
   num_channels: 3
   use_kp_embedding: True

@@ -6,10 +6,8 @@ from tqdm import trange, tqdm
 
 import torch
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import MultiStepLR
-from torchvision import transforms
 
-from frames_dataset import VideoToTensor, Normalize, FramesDataset, PairedDataset
+from frames_dataset import FramesDataset, PairedDataset
 from logger import Logger, Visualizer
 from modules.dd_model import DDModel
 from modules.losses import total_loss
@@ -127,12 +125,7 @@ if __name__ == "__main__":
     model = DDModel(**config['model_params'])
     model = torch.nn.DataParallel(module=model, device_ids=opt.device_ids)
 
-    data_transform = transforms.Compose([
-        VideoToTensor(),
-        Normalize(config['dataset_params']['image_shape'][0])
-    ])
-
-    dataset = FramesDataset(transform=data_transform, is_train=(opt.mode == 'train'), **config['dataset_params'])
+    dataset = FramesDataset(is_train=(opt.mode == 'train'), **config['dataset_params'])
 
     if opt.mode == 'train':
         print ("Start model training...")

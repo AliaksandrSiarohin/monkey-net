@@ -4,6 +4,7 @@ import imageio
 
 import os
 from modules.kp_extractor import kp2gaussian
+from skimage.draw import circle
 
 
 class Logger:
@@ -79,13 +80,12 @@ class Visualizer:
 
     def draw_video_with_kp(self, video, kp_array):
         video_array = np.copy(video)
-        # spatial_size = np.array(video_array.shape[2:0:-1])[np.newaxis, np.newaxis]
-        # kp_array = spatial_size * (kp_array + 1) / 2
-        # for i in range(len(video_array)):
-        #     for kp in kp_array[i]:
-        #         rr, cc = circle(kp[1], kp[0], self.kp_size, shape=video_array.shape[1:3])
-        #         video_array[i][rr, cc] = (1, 1, 1)
-        video_array = np.maximum(kp_array, video)
+        spatial_size = np.array(video_array.shape[2:0:-1])[np.newaxis, np.newaxis]
+        kp_array = spatial_size * (kp_array + 1) / 2
+        for i in range(len(video_array)):
+            for kp in kp_array[i]:
+                rr, cc = circle(kp[1], kp[0], self.kp_size, shape=video_array.shape[1:3])
+                video_array[i][rr, cc] = (1, 1, 1)
         return video_array
 
     def create_video_column_with_kp(self, video, kp):
@@ -128,24 +128,15 @@ class Visualizer:
         out_video_batch = out['video_prediction'].data.cpu().numpy()
         gt_video_batch = inp['video_array'].data.cpu().numpy()
         appearance_deformed_batch = out['video_deformed'].data.cpu().numpy()
-
-        kp_array = out['kp_array']
-        if 'var' in kp_array:
-            kp_emb = kp2gaussian(out['kp_array'], spatial_size=out_video_batch.shape[-2:], kp_variance='learned')
-        else:
-            kp_emb = kp2gaussian(out['kp_array'], spatial_size=out_video_batch.shape[-2:], kp_variance=0.003)
-        kp_emb = kp_emb.permute(0, 2, 1, 3, 4).max(dim=1, keepdim=True)[0].repeat(1, out_video_batch.shape[1], 1, 1, 1)
-        kp_emb = kp_emb.data.cpu().numpy()
-        kp_emb /= np.max(kp_emb, axis=(3,4), keepdims=True)
+        kp_array = out['kp_array']['mean'].data.cpu().numpy()
 
         out_video_batch = np.transpose(out_video_batch, [0, 2, 3, 4, 1])
         gt_video_batch = np.transpose(gt_video_batch, [0, 2, 3, 4, 1])
         appearance_deformed_batch = np.transpose(appearance_deformed_batch, [0, 2, 3, 4, 1])
-        kp_emb = np.transpose(kp_emb, [0, 2, 3, 4, 1])
 
         diff_batch = gt_video_batch * 0.5 + appearance_deformed_batch * 0.5
 
-        image = self.create_image_grid((gt_video_batch, kp_emb), out_video_batch,
+        image = self.create_image_grid((gt_video_batch, kp_array), out_video_batch,
                                        appearance_deformed_batch, diff_batch)
         image = (255 * image).astype(np.uint8)
         return image
