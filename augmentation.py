@@ -40,7 +40,8 @@ def resize_clip(clip, size, interpolation='bilinear'):
             size = size[1], size[0]
 
         scaled = [
-            resize(img, size, order=1 if interpolation == 'bilinear' else 0, preserve_range=True) for img in clip
+            resize(img, size, order=1 if interpolation == 'bilinear' else 0, preserve_range=True,
+                   mode='constant', anti_aliasing=True) for img in clip
         ]
     elif isinstance(clip[0], PIL.Image.Image):
         if isinstance(size, numbers.Number):
@@ -127,6 +128,7 @@ class RandomResize(object):
         new_size = (new_w, new_h)
         resized = resize_clip(
             clip, new_size, interpolation=self.interpolation)
+
         return resized
 
 
@@ -251,6 +253,7 @@ class SelectRandomFrames(object):
         else:
             selected_index = np.sort(np.random.choice(range(frame_count), replace=False, size=self.number_of_frames))
             selected = clip[selected_index]
+
         return selected
 
 
