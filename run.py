@@ -55,7 +55,6 @@ def train(config, model, checkpoint, log_dir, dataset):
                     optimizer.zero_grad()
 
                 logger.save_values(loss_list=loss_list)
-
                 #logger.log(i, inp=x)
 
             if it in epochs_milestones:
@@ -83,15 +82,14 @@ def test(config, model, checkpoint, log_dir, dataset):
 
     loss_list = []
     for it, x in tqdm(enumerate(dataloader)):
-        out = model(x)
-        image = Visualizer().visualize_reconstruction(x, out)
-        imageio.mimsave(os.path.join(log_dir, str(it).zfill(8) + '.gif'), image)
-        out = {key: value.data for key, value in out.items()}
-
-        loss, losses = total_loss(x, out, config['loss_weights'])
-
-        loss_names, values = list(zip(*losses))
-        loss_list.append(values)
+        with torch.no_grad():
+            out = model(x)
+            image = Visualizer().visualize_reconstruction(x, out)
+            imageio.mimsave(os.path.join(log_dir, str(it).zfill(8) + '.gif'), image)
+	
+            loss, losses = total_loss(x, out, config['loss_weights'])
+            loss_names, values = list(zip(*losses))
+            loss_list.append(values)
 
     print ("; ".join([name + " - " + str(value) for name, value in zip(loss_names, np.array(loss_list).mean(axis=0))]))
 
@@ -111,10 +109,11 @@ def transfer(config, model, checkpoint, log_dir, dataset):
 
     model = model.module
     for it, x in tqdm(enumerate(dataloader)):
-        x = {key: value.cuda() for key,value in x.items()}
-        out = model.transfer(x)
-        image = Visualizer().visualize_transfer(inp=x, out=out)
-        imageio.mimsave(os.path.join(log_dir, str(it).zfill(8) + '.gif'), image)
+        with torch.no_grad():
+            x = {key: value.cuda() for key,value in x.items()}
+            out = model.transfer(x)
+            image = Visualizer().visualize_transfer(inp=x, out=out)
+            imageio.mimsave(os.path.join(log_dir, str(it).zfill(8) + '.gif'), image)
 
 
 if __name__ == "__main__":
