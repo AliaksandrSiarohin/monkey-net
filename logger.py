@@ -8,7 +8,8 @@ from skimage.draw import circle
 
 
 class Logger:
-    def __init__(self, model, log_dir, optimizer=None, log_file_name='log.txt', log_freq=100, cpk_freq=1000, fill_counter=8):
+    def __init__(self, generator, log_dir, discriminator=None, optimizer_generator=None,
+                 optimizer_discriminator=None, log_file_name='log.txt', log_freq=100, cpk_freq=1000, fill_counter=8):
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
         self.log_dir = log_dir
@@ -18,8 +19,10 @@ class Logger:
         self.cpk_freq = cpk_freq
         self.fill_counter = fill_counter
 
-        self.model = model
-        self.optimizer = optimizer
+        self.generator = generator
+        self.discriminator = discriminator
+        self.optimizer_generator = optimizer_generator
+        self.optimizer_discriminator = optimizer_discriminator
 
         self.it = 0
 
@@ -34,20 +37,29 @@ class Logger:
         self.log_file.flush()
 
     def visualize_rec(self, inp):
-        out = self.model(inp)
+        out = self.generator(inp)
         image = Visualizer().visualize_reconstruction(inp, out)
         imageio.mimsave(os.path.join(self.log_dir, "%s-rec.gif" % str(self.it).zfill(self.fill_counter)), image)
 
     def save_cpk(self):
-        d = {"model": self.model.state_dict(), "optimizer": self.optimizer.state_dict(), "iter": self.it}
+        d = {"generator": self.generator.state_dict(),
+             "optimizer_generator": self.optimizer_generator.state_dict(),
+             "discriminator": self.discriminator.state_dict(),
+             "optimizer_discriminator": self.optimizer_discriminator.state_dict(),
+             "iter": self.it}
         torch.save(d, os.path.join(self.log_dir, '%s-checkpoint.pth.tar' % str(self.it).zfill(self.fill_counter)))
 
     @staticmethod
-    def load_cpk(checkpoint_path, model, optimizer = None):
+    def load_cpk(checkpoint_path, generator, discriminator=None,
+                 optimizer_generator=None, optimizer_discriminator=None):
         checkpoint = torch.load(checkpoint_path)
-        model.load_state_dict(checkpoint['model'])
-        if optimizer is not None:
-            optimizer.load_state_dict(checkpoint['optimizer'])
+        generator.load_state_dict(checkpoint['generator'])
+        if discriminator is not None:
+            discriminator.load_state_dict(checkpoint['discriminator'])
+        if optimizer_generator is not None:
+            optimizer_generator.load_state_dict(checkpoint['optimizer_generator'])
+        if optimizer_discriminator is not None:
+            optimizer_discriminator.load_state_dict(checkpoint['optimizer_discriminator'])
         return checkpoint['iter']
 
     def __enter__(self):
@@ -57,8 +69,7 @@ class Logger:
         self.save_cpk()
         self.log_file.close()
 
-    def save_values(self, loss_list):
-        names, values = list(zip(*loss_list))
+    def save_values(self, names, values):
         self.names = names
         self.loss_list.append(values)
 

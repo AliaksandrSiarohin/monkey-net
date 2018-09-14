@@ -19,7 +19,7 @@ log_params:
   log_freq: 20
   cpk_freq: 10000
 
-model_params:
+generator_params:
   num_kp: 10
   kp_variance: 0.01
   deformation_type: "predicted"
@@ -49,19 +49,21 @@ model_params:
     use_difference: False
     learnable: False
 
+discriminator_params:
+  block_expansion: 32
+  num_channels: 3
+  max_features: 128
+  number_of_blocks: 3
+
 schedule_params:
   num_epochs: [1, 1, 1, 1, 1]
   frames_per_sample: [4, 8, 16, 32, 32]
-  lr: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-4]
+  lr_generator: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-4]
+  lr_discriminator: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-4]
   batch_size: [2, 2, 2, 2, 2]
 
 loss_weights:
-  reconstruction: 50
-  reconstruction_deformed: 50
-  reconstruction_grad: 0
-  kp_movement: 0
-  tv: 0
-  tv_border: 0
-  reconstruction_flow: 0
-  kp_stationary: 0
-  allowed_movement: 0
+  reconstruction: [50, 50, 50, 50]
+  reconstruction_deformed: [50, 50, 50, 50]
+  generator_gan: 1
+  discriminator_gan: 1
