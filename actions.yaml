@@ -4,16 +4,16 @@ dataset_params:
   classes_list: data/actions.csv
   augmentation_param:
     flip_param: True
-#    rotation_param:
-#      degrees: [-10, 10]
-#    resize_param:
-#      ratio : [1, 1.25]
-#      interpolation: 'nearest'
+    rotation_param:
+      degrees: [-10, 10]
+    resize_param:
+      ratio : [1, 1.25]
+      interpolation: 'nearest'
     select_frames_param:
       reflect_pad_time: True
       consequent: True
-#    crop_param:
-#      size: [64, 64]
+    crop_param:
+      size: [64, 64]
 
 log_params:
   log_freq: 50
@@ -53,8 +53,8 @@ model_params:
 discriminator_params:
   block_expansion: 32
   num_channels: 3
-  max_features: 128
-  number_of_blocks: 3
+  max_features: 256
+  number_of_blocks: 4
 
 schedule_params:
   num_epochs: [1000, 500, 300, 100, 100, 100, 1000]
@@ -64,7 +64,7 @@ schedule_params:
   batch_size: [16, 16, 16, 8, 4, 2, 2]
 
 loss_weights:
-  reconstruction: [50, 50, 50, 50]
-  reconstruction_deformed: [50, 50, 50, 50]
+  reconstruction: [10, 10, 10, 10, 10]
+  reconstruction_deformed: [10, 10, 10, 10, 10]
   generator_gan: 1
   discriminator_gan: 1

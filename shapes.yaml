@@ -6,7 +6,7 @@ dataset_params:
     rotation_param:
       degrees: [-10, 10]
     resize_param:
-      ratio : [1, 1.25]
+      ratio : [0.75, 1.25]
       interpolation: 'nearest'
     select_frames_param:
       reflect_pad_time: True
@@ -58,12 +58,12 @@ discriminator_params:
 schedule_params:
   num_epochs: [1, 1, 1, 1, 1]
   frames_per_sample: [4, 8, 16, 32, 32]
-  lr_generator: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-4]
-  lr_discriminator: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-4]
+  lr_generator: [2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-5]
+  lr_discriminator: [2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-5]
   batch_size: [2, 2, 2, 2, 2]
 
 loss_weights:
-  reconstruction: [50, 50, 50, 50]
-  reconstruction_deformed: [50, 50, 50, 50]
+  reconstruction: [10, 10, 10, 10]
+  reconstruction_deformed: [0, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1

@@ -28,13 +28,13 @@ def generator_loss(discriminator_maps_generated, discriminator_maps_real, discri
     loss_names = []
     loss_values = []
     if loss_weights['reconstruction_deformed'] is not None:
-        for i, (a, b) in enumerate(zip(discriminator_maps_real, discriminator_maps_deformed)):
-            loss_names.append("l%s_rec_def" % i)
+        for i, (a, b) in enumerate(zip(discriminator_maps_real[:-1], discriminator_maps_deformed[:-1])):
+            loss_names.append("layer-%s_rec_def" % i)
             loss_values.append(reconstruction_loss(b, a, weight=loss_weights['reconstruction_deformed'][i]))
 
     if loss_weights['reconstruction'] != 0:
-        for i, (a, b) in enumerate(zip(discriminator_maps_real, discriminator_maps_generated)):
-            loss_names.append("l%s_rec" % i)
+        for i, (a, b) in enumerate(zip(discriminator_maps_real[:-1], discriminator_maps_generated[:-1])):
+            loss_names.append("layer-%s_rec" % i)
             loss_values.append(reconstruction_loss(b, a, weight=loss_weights['reconstruction'][i]))
 
     loss_names.append("gen_gan")

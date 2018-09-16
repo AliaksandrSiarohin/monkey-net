@@ -10,7 +10,7 @@ import PIL
 import scipy
 
 from skimage.transform import resize, rotate
-
+from skimage.util import pad
 
 def crop_clip(clip, min_h, min_w, h, w):
     if isinstance(clip[0], np.ndarray):
@@ -24,6 +24,15 @@ def crop_clip(clip, min_h, min_w, h, w):
         raise TypeError('Expected numpy.ndarray or PIL.Image' +
                         'but got list of {0}'.format(type(clip[0])))
     return cropped
+
+
+def pad_clip(clip, h, w):
+    im_h, im_w = clip[0].shape[:2]
+    pad_h = (0,0) if h < im_h else ((h - im_h) // 2, (h - im_h + 1) // 2)
+    pad_w = (0,0) if w < im_w else ((w - im_w) // 2, (w - im_w + 1) // 2)
+
+    return pad(clip, ((0, 0), pad_h, pad_w, (0, 0)), mode='edge')
+
 
 
 def resize_clip(clip, size, interpolation='bilinear'):
@@ -161,16 +170,11 @@ class RandomCrop(object):
         else:
             raise TypeError('Expected numpy.ndarray or PIL.Image' +
                             'but got list of {0}'.format(type(clip[0])))
-        if w > im_w or h > im_h:
-            error_msg = (
-                'Initial image size should be larger then '
-                'cropped size but got cropped sizes : ({w}, {h}) while '
-                'initial image is ({im_w}, {im_h})'.format(
-                    im_w=im_w, im_h=im_h, w=w, h=h))
-            raise ValueError(error_msg)
 
-        x1 = random.randint(0, im_w - w)
-        y1 = random.randint(0, im_h - h)
+        clip = pad_clip(clip, h, w)
+        im_h, im_w = clip.shape[1:3]
+        x1 = 0 if h == im_h else random.randint(0, im_w - w)
+        y1 = 0 if w == im_w else random.randint(0, im_h - h)
         cropped = crop_clip(clip, y1, x1, h, w)
 
         return cropped

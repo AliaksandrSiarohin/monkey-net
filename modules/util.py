@@ -98,7 +98,7 @@ class DownBlock3D(nn.Module):
     def forward(self, x):
         out = self.conv(x)
         out = self.norm(out)
-        out = F.leaky_relu(out, 0.2)
+        out = F.relu(out)
         out = self.pool(out)
         return out
 

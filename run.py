@@ -87,7 +87,7 @@ def train(config, generator, discriminator, checkpoint, log_dir, dataset):
                 optimizer_generator.zero_grad()
 
                 logger.save_values(gen_loss_names + disc_loss_names, gen_loss_values + disc_loss_values)
-                logger.log(i, inp=x)
+                #logger.log(i, inp=x)
 
             if it in epochs_milestones:
                 schedule_iter = np.searchsorted(epochs_milestones, it, side='right')
