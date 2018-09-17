@@ -27,8 +27,8 @@ def set_optimizer_lr(optimizer, lr):
 
 def train(config, generator, discriminator, checkpoint, log_dir, dataset):
     start_iter = 0
-    optimizer_generator = torch.optim.Adam(generator.parameters())
-    optimizer_discriminator = torch.optim.Adam(discriminator.parameters())
+    optimizer_generator = torch.optim.Adam(generator.parameters(), betas=(0.5, 0.999))
+    optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), betas=(0.5, 0.999))
 
     if checkpoint is not None:
         start_iter = Logger.load_cpk(checkpoint, generator, discriminator, optimizer_generator, optimizer_discriminator)

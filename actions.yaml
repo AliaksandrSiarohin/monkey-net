@@ -60,8 +60,8 @@ discriminator_params:
 schedule_params:
   num_epochs: [5000, 500, 300, 100, 100, 100, 1000]
   frames_per_sample: [4, 8, 16, 32, 64, 100, 100]
-  lr_generator: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-4]
-  lr_discriminator: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-4]
+  lr_generator: [2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-5]
+  lr_discriminator: [2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-5]
   batch_size: [16, 16, 16, 8, 4, 2, 2]
 
 loss_weights:
