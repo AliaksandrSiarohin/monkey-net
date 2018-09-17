@@ -70,9 +70,12 @@ def train(config, generator, discriminator, checkpoint, log_dir, dataset):
                 if torch.isnan(x['video_array'].grad).byte().any():
                     warnings.warn("Nan in gradient", Warning)
                     optimizer_generator.zero_grad()
+                    optimizer_discriminator.zero_grad()
                     continue
                 else:
                     optimizer_generator.step()
+                    optimizer_generator.zero_grad()
+                    optimizer_discriminator.zero_grad()
 
                 discriminator_maps_generated = discriminator(video_prediction.detach())
                 discriminator_maps_real = discriminator(x['video_array'])
@@ -83,8 +86,6 @@ def train(config, generator, discriminator, checkpoint, log_dir, dataset):
                 loss.backward()
                 optimizer_discriminator.step()
                 optimizer_discriminator.zero_grad()
-
-                optimizer_generator.zero_grad()
 
                 logger.save_values(gen_loss_names + disc_loss_names, gen_loss_values + disc_loss_values)
                 #logger.log(i, inp=x)
