@@ -116,8 +116,6 @@ def test(config, generator, checkpoint, log_dir, dataset):
 
     loss_list = []
     for it, x in tqdm(enumerate(dataloader)):
-        if it == 10:
-            break
         with torch.no_grad():
             out = generator(x)
             image = Visualizer().visualize_reconstruction(x, out)
@@ -127,7 +125,6 @@ def test(config, generator, checkpoint, log_dir, dataset):
             loss_list.append(loss.data.cpu().numpy())
 
     print ("Reconstruction loss: %s" % np.mean(loss_list))
-    #print ("; ".join([name + " - " + str(value) for name, value in zip(loss_names, np.array(loss_list).mean(axis=0))]))
 
 
 def transfer(config, generator, checkpoint, log_dir, dataset):
