@@ -4,14 +4,14 @@ dataset_params:
   classes_list: data/actions.csv
   augmentation_param:
     flip_param: True
-    rotation_param:
-      degrees: [-10, 10]
-    resize_param:
-      ratio : [1, 1.25]
-      interpolation: 'nearest'
+#    rotation_param:
+#      degrees: [-10, 10]
+#    resize_param:
+#      ratio : [0.75, 1.25]
+#      interpolation: 'nearest'
     select_frames_param:
       reflect_pad_time: True
-      consequent: True
+      consequent: False
     crop_param:
       size: [64, 64]
 
@@ -19,15 +19,15 @@ log_params:
   log_freq: 50
   cpk_freq: 1000
 
-model_params:
+generator_params:
   num_kp: 10
-  kp_variance: 'learned'
+  kp_variance: 0.01
   deformation_type: "predicted"
   num_channels: 3
   use_kp_embedding: True
-  detach_deformation: True
+  detach_deformation: False
   kp_extractor_module_params:
-    temperature: 1
+    temperature: 0.1
     block_expansion: 16
     max_features: 128
     number_of_blocks: 5
@@ -44,6 +44,7 @@ model_params:
     use_difference: True
     difference_type: "absolute"
     features_per_kp: 4
+    learnable: True
   main_embedding_params:
     use_difference: False
     difference_type: "absolute"
@@ -57,14 +58,14 @@ discriminator_params:
   number_of_blocks: 4
 
 schedule_params:
-  num_epochs: [1000, 500, 300, 100, 100, 100, 1000]
+  num_epochs: [5000, 500, 300, 100, 100, 100, 1000]
   frames_per_sample: [4, 8, 16, 32, 64, 100, 100]
   lr_generator: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-4]
   lr_discriminator: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3, 1.0e-4]
   batch_size: [16, 16, 16, 8, 4, 2, 2]
 
 loss_weights:
-  reconstruction: [10, 10, 10, 10, 10]
-  reconstruction_deformed: [10, 10, 10, 10, 10]
+  reconstruction: [100, 100, 100, 100, 100]
+  reconstruction_deformed: [100, 100, 100, 100, 100]
   generator_gan: 1
   discriminator_gan: 1

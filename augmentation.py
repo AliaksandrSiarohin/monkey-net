@@ -110,6 +110,16 @@ class RandomHorizontalFlip(object):
         return clip
 
 
+
+class RandomTimeFlip(object):
+    def __call__(self, clip):
+       if random.random() < 0.5:
+           if isinstance(clip[0], np.ndarray):
+               return clip[::-1]
+       return clip
+
+
+
 class RandomResize(object):
     """Resizes a list of (H x W x C) numpy.ndarray to the final size
     The larger the original image is, the more times it takes to
@@ -277,6 +287,9 @@ class AllAugmentationTransform:
 
         if flip_param is not None:
             self.transforms.append(RandomHorizontalFlip())
+	
+        if flip_param is not None:
+            self.transforms.append(RandomTimeFlip())
 
         if rotation_param is not None:
             self.transforms.append(RandomRotation(**rotation_param))
