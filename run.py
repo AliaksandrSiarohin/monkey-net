@@ -65,7 +65,8 @@ def train(config, generator, discriminator, checkpoint, log_dir, dataset):
                                                                        discriminator_maps_deformed=discriminator_maps_deformed,
                                                                        discriminator_maps_real=discriminator_maps_real,
                                                                        loss_weights=config['loss_weights'],
-                                                                       deformation=generated['deformation'])
+                                                                       deformation=generated['deformation'],
+                                                                       kp_video=generated['kp_video'])
                 loss.backward()
 
                 if torch.isnan(x['video_array'].grad).byte().any():
@@ -89,7 +90,7 @@ def train(config, generator, discriminator, checkpoint, log_dir, dataset):
                 optimizer_discriminator.zero_grad()
 
                 logger.save_values(gen_loss_names + disc_loss_names, gen_loss_values + disc_loss_values)
-                #logger.log(i, inp=x)
+                logger.log(i, inp=x)
 
             if it in epochs_milestones:
                 schedule_iter = np.searchsorted(epochs_milestones, it, side='right')

@@ -67,5 +67,6 @@ loss_weights:
   reconstruction_deformed: [0, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1
-  tv: 0.1
+  tv: 1
   tv_border: 1
+  kp_movement: 1

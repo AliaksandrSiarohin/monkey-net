@@ -30,6 +30,40 @@ def tv_loss(deformation, target, loss_weight, border_weight=1):
     return torch.mean(loss) * loss_weight
 
 
+def kp_movement_loss(deformation, kp_video, weight):
+    kp_video = kp_video['mean']
+    if weight == 0:
+        return 0
+
+    deformation = deformation[..., :2]
+
+    bs, d, h, w, _ = deformation.shape
+    deformation = deformation.view(-1, h * w, 2)
+    bs, d, num_kp, _ = kp_video.shape
+
+    kp_index = ((kp_video.contiguous().view(-1, num_kp, 2) + 1) / 2)
+    multiple = torch.from_numpy(np.array((w - 1, h - 1))).view(1, 1, 2).type(kp_index.type())
+    kp_index = multiple * kp_index
+
+    kp_index = kp_index.long()
+    kp_index = kp_index[:, :, 0] + kp_index[:, :, 1] * w
+
+    kp_values_x = torch.gather(deformation[..., 0], dim=1, index=kp_index)
+    kp_values_y = torch.gather(deformation[..., 1], dim=1, index=kp_index)
+
+    kp_values_x = kp_values_x.view(bs, d, num_kp)
+    kp_values_y = kp_values_y.view(bs, d, num_kp)
+
+    target = kp_video[:, 0, :, :].view(bs, 1, num_kp, 2)
+
+    y_loss = torch.mean(torch.abs(target[..., 1] - kp_values_y))
+    x_loss = torch.mean(torch.abs(target[..., 0] - kp_values_x))
+
+    total = y_loss + x_loss
+
+    return weight * total
+
+
 def reconstruction_loss(prediction, target, weight):
     if weight == 0:
         return 0
@@ -50,7 +84,7 @@ def discriminator_gan_loss(discriminator_maps_generated, discriminator_maps_real
 
 
 def generator_loss(discriminator_maps_generated, discriminator_maps_real, discriminator_maps_deformed,
-                   deformation, loss_weights):
+                   deformation, kp_video, loss_weights):
     loss_names = []
     loss_values = []
     if loss_weights['reconstruction_deformed'] is not None:
@@ -63,11 +97,15 @@ def generator_loss(discriminator_maps_generated, discriminator_maps_real, discri
             loss_names.append("layer-%s_rec" % i)
             loss_values.append(reconstruction_loss(b, a, weight=loss_weights['reconstruction'][i]))
 
-    loss_names.append('tv')
-    loss_values.append(tv_loss(deformation, discriminator_maps_real[0], loss_weights['tv'], loss_weights['tv_border']))
 
     loss_names.append("gen_gan")
     loss_values.append(generator_gan_loss(discriminator_maps_generated, weight=loss_weights['generator_gan']))
+
+    loss_names.append('tv')
+    loss_values.append(tv_loss(deformation, discriminator_maps_real[0], loss_weights['tv'], loss_weights['tv_border']))
+
+    loss_names.append('kp_movement')
+    loss_values.append(kp_movement_loss(deformation, kp_video, loss_weights['kp_movement']))
 
     total = sum(loss_values)
 
@@ -88,5 +126,6 @@ def discriminator_loss(discriminator_maps_generated, discriminator_maps_real, lo
     loss_values = [0 if type(value) == int else value.detach().cpu().numpy() for value in loss_values]
 
     return total, loss_names, loss_values
+
 
 
