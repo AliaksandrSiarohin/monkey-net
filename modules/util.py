@@ -170,16 +170,32 @@ class Hourglass(nn.Module):
         return self.decoder(self.encoder(x))
 
 
-def matrix_inverse(batch_of_matrix, eps=1e-3):
+def matrix_inverse(batch_of_matrix):
     init_shape = batch_of_matrix.shape
     a = batch_of_matrix[..., 0, 0].unsqueeze(-1)
     b = batch_of_matrix[..., 0, 1].unsqueeze(-1)
     c = batch_of_matrix[..., 1, 0].unsqueeze(-1)
     d = batch_of_matrix[..., 1, 1].unsqueeze(-1)
 
-    det = a * d - b * c + eps
+    det = a * d - b * c
     out = torch.cat([d, -b, -c, a], dim=-1)
     out /= det
 
     return out.view(init_shape)
 
+
+def matrix_det(batch_of_matrix):
+    a = batch_of_matrix[..., 0, 0].unsqueeze(-1)
+    b = batch_of_matrix[..., 0, 1].unsqueeze(-1)
+    c = batch_of_matrix[..., 1, 0].unsqueeze(-1)
+    d = batch_of_matrix[..., 1, 1].unsqueeze(-1)
+
+    det = a * d - b * c
+    return det
+
+
+def matrix_trace(batch_of_matrix):
+    a = batch_of_matrix[..., 0, 0].unsqueeze(-1)
+    d = batch_of_matrix[..., 1, 1].unsqueeze(-1)
+
+    return a + d

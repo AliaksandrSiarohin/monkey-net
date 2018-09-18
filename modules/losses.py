@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 
-from modules.util import make_coordinate_grid, compute_image_gradient
+from modules.util import make_coordinate_grid, compute_image_gradient, matrix_det, matrix_inverse, matrix_trace
 
 
 def tv_loss(deformation, target, loss_weight, border_weight=1):
@@ -64,6 +64,26 @@ def kp_movement_loss(deformation, kp_video, weight):
     return weight * total
 
 
+def variance_reg(kp_video, loss_weight, variance_target):
+    if loss_weight == 0:
+        return 0
+    prediction = kp_video['var']
+
+    target = torch.from_numpy(np.array([[variance_target, 0], [0, variance_target]]))
+    target = target.type(prediction.type())
+
+    target = target.view(1, 1, 1, 2, 2)
+
+    det_target = matrix_det(target)
+    det_prediction = matrix_det(prediction)
+
+    inv_target = matrix_inverse(target)
+
+    kl = matrix_trace(torch.matmul(inv_target, prediction)) + torch.log(det_target / det_prediction) - 2
+
+    return kl.mean() * loss_weight
+
+
 def reconstruction_loss(prediction, target, weight):
     if weight == 0:
         return 0
@@ -83,6 +103,8 @@ def discriminator_gan_loss(discriminator_maps_generated, discriminator_maps_real
     return weight * score.mean()
 
 
+
+
 def generator_loss(discriminator_maps_generated, discriminator_maps_real, discriminator_maps_deformed,
                    deformation, kp_video, loss_weights):
     loss_names = []
@@ -97,6 +119,8 @@ def generator_loss(discriminator_maps_generated, discriminator_maps_real, discri
             loss_names.append("layer-%s_rec" % i)
             loss_values.append(reconstruction_loss(b, a, weight=loss_weights['reconstruction'][i]))
 
+    loss_names.append("var_reg")
+    loss_values.append(variance_reg(kp_video, loss_weights['var_reg'], loss_weights['var_target']))
 
     loss_names.append("gen_gan")
     loss_values.append(generator_gan_loss(discriminator_maps_generated, weight=loss_weights['generator_gan']))

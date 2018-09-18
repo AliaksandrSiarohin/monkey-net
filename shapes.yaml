@@ -21,7 +21,7 @@ log_params:
 
 generator_params:
   num_kp: 10
-  kp_variance: 0.01
+  kp_variance: "learned"
   deformation_type: "predicted"
   num_channels: 3
   use_kp_embedding: True
@@ -67,6 +67,8 @@ loss_weights:
   reconstruction_deformed: [0, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1
-  tv: 1
+  tv: 0
   tv_border: 1
-  kp_movement: 1
+  kp_movement: 0
+  var_reg: 0.01
+  var_target: 0.01
