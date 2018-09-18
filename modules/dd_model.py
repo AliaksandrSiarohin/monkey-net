@@ -77,7 +77,8 @@ class DDModel(nn.Module):
         video_deformed = self.deform_input(appearance_frame, deformations_absolute)
         video_prediction = self.video_decoder(skips)
 
-        return {"video_prediction": video_prediction, "video_deformed": video_deformed}
+        return {"video_prediction": video_prediction, "video_deformed": video_deformed,
+                'deformation': deformations_absolute}
 
     def forward(self, inp):
         return self.reconstruction(inp)

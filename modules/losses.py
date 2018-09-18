@@ -5,6 +5,31 @@ import numpy as np
 from modules.util import make_coordinate_grid, compute_image_gradient
 
 
+def tv_loss(deformation, target, loss_weight, border_weight=1):
+    if loss_weight == 0:
+        return 0
+    deformation = deformation[..., :2]
+    target = target.permute(0, 2, 1, 3, 4).contiguous()
+    bs, d, c, h, w = target.shape
+    target = target.view(bs * d, c, h, w)
+
+    border = compute_image_gradient(target).abs().sum(dim=1)
+    border = torch.exp(-border_weight * border)
+
+    deformation = deformation.view(bs * d, h, w, 2)
+    grid = make_coordinate_grid((h, w), deformation.type())
+    grid = grid.unsqueeze(0)
+
+    deformation_relative = (deformation - grid)
+    deformation_relative = deformation_relative.permute(0, 3, 1, 2)
+
+    deformation_grad = compute_image_gradient(deformation_relative).abs().sum(dim=1)
+
+    loss = border * deformation_grad
+
+    return torch.mean(loss) * loss_weight
+
+
 def reconstruction_loss(prediction, target, weight):
     if weight == 0:
         return 0
@@ -24,7 +49,8 @@ def discriminator_gan_loss(discriminator_maps_generated, discriminator_maps_real
     return weight * score.mean()
 
 
-def generator_loss(discriminator_maps_generated, discriminator_maps_real, discriminator_maps_deformed, loss_weights):
+def generator_loss(discriminator_maps_generated, discriminator_maps_real, discriminator_maps_deformed,
+                   deformation, loss_weights):
     loss_names = []
     loss_values = []
     if loss_weights['reconstruction_deformed'] is not None:
@@ -36,6 +62,9 @@ def generator_loss(discriminator_maps_generated, discriminator_maps_real, discri
         for i, (a, b) in enumerate(zip(discriminator_maps_real[:-1], discriminator_maps_generated[:-1])):
             loss_names.append("layer-%s_rec" % i)
             loss_values.append(reconstruction_loss(b, a, weight=loss_weights['reconstruction'][i]))
+
+    loss_names.append('tv')
+    loss_values.append(tv_loss(deformation, discriminator_maps_real[0], loss_weights['tv'], loss_weights['tv_border']))
 
     loss_names.append("gen_gan")
     loss_values.append(generator_gan_loss(discriminator_maps_generated, weight=loss_weights['generator_gan']))

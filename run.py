@@ -64,7 +64,8 @@ def train(config, generator, discriminator, checkpoint, log_dir, dataset):
                 loss, gen_loss_names, gen_loss_values = generator_loss(discriminator_maps_generated=discriminator_maps_generated,
                                                                        discriminator_maps_deformed=discriminator_maps_deformed,
                                                                        discriminator_maps_real=discriminator_maps_real,
-                                                                       loss_weights=config['loss_weights'])
+                                                                       loss_weights=config['loss_weights'],
+                                                                       deformation=generated['deformation'])
                 loss.backward()
 
                 if torch.isnan(x['video_array'].grad).byte().any():
