@@ -65,7 +65,10 @@ schedule_params:
   batch_size: [16, 16, 16, 8, 4, 2, 2]
 
 loss_weights:
-  reconstruction: [100, 100, 100, 100, 100]
-  reconstruction_deformed: [100, 100, 100, 100, 100]
+  reconstruction: [10, 10, 10, 10, 1]
+  reconstruction_deformed: [10, 10, 10, 10, 1]
   generator_gan: 1
   discriminator_gan: 1
+  tv: 0.1
+  tv_border: 1
+  kp_movement: 1
