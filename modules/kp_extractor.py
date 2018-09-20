@@ -91,10 +91,12 @@ class MovementEmbeddingModule(nn.Module):
     Produce embedding for movement
     """
     def __init__(self, num_kp, use_difference, kp_variance, num_channels,
-                 use_deformed_appearance=False, learnable=False, features_per_kp=1, difference_type='absolute'):
+                 use_deformed_appearance=False, learnable=False,
+                 features_per_kp=1, difference_type='absolute', aggregation_type='cat'):
         super(MovementEmbeddingModule, self).__init__()
 
         assert difference_type in ['absolute', 'relative']
+        assert aggregation_type in ['cat', 'sum']
 
         if learnable:
             self.out_channels = features_per_kp * num_kp
@@ -103,11 +105,15 @@ class MovementEmbeddingModule(nn.Module):
         else:
             self.out_channels = (1 + 2 * use_difference + num_channels * use_deformed_appearance) * num_kp
 
+        if aggregation_type == 'sum':
+            self.out_channels = self.out_channels // num_kp
+
         self.learnable = learnable
         self.kp_variance = kp_variance
         self.difference_type = difference_type
         self.use_difference = use_difference
         self.use_deformed_appearance = use_deformed_appearance
+        self.aggregation_type = aggregation_type
 
     def combine_kp(self, kp_appearance, kp_video):
         kp_video_diff = kp_video['mean'] - kp_video['mean'][:, 0:1]
@@ -166,6 +172,9 @@ class MovementEmbeddingModule(nn.Module):
             movement_encoding = movement_encoding.view(bs * d, -1, h, w)
             movement_encoding = self.conv(movement_encoding)
             movement_encoding = movement_encoding.view(bs, d, -1, h, w)
+
+        if self.aggregation_type == 'sum':
+            movement_encoding = movement_encoding.view(bs, d, num_kp, -1, h, w).sum(dim=2)
 
         return movement_encoding.permute(0, 2, 1, 3, 4)
 
