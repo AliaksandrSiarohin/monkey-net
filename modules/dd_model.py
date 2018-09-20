@@ -19,10 +19,10 @@ class DDModel(nn.Module):
         assert deformation_type in ['affine', 'predicted', 'none']
 
         self.appearance_encoder = AppearanceEncoder(num_channels=num_channels, **main_module_params)
-        self.deformation_embedding_module = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance,
-                                                                    **deformation_embedding_params)
+        self.deformation_embedding_module = MovementEmbeddingModule(num_kp=num_kp, num_channels=num_channels,
+                                                                    kp_variance=kp_variance, **deformation_embedding_params)
         self.main_embedding_module = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance,
-                                                             **main_embedding_params)
+                                                             num_channels=num_channels, **main_embedding_params)
 
         if deformation_type == 'affine':
             self.deformation_module = AffineDeformation(embedding_features=self.deformation_embedding_module.out_channels,
@@ -52,15 +52,14 @@ class DDModel(nn.Module):
     def predict(self, appearance_frame, kp_video, kp_appearance):
         appearance_skips = self.appearance_encoder(appearance_frame)
 
-        spatial_size = appearance_frame.shape[3:]
         if self.detach_deformation:
             movement_embedding = self.deformation_embedding_module(kp_appearance={k:v.detach() for k, v in kp_appearance.items()},
                                                                    kp_video={k:v.detach() for k, v in kp_video.items()},
-                                                                   spatial_size=spatial_size)
+                                                                   appearance_frame=appearance_frame)
         else:
             movement_embedding = self.deformation_embedding_module(kp_appearance=kp_appearance,
                                                                    kp_video=kp_video,
-                                                                   spatial_size=spatial_size)
+                                                                   appearance_frame=appearance_frame)
 
         deformations_absolute = self.deformation_module(movement_embedding)
         deformed_skips = [self.deform_input(skip, deformations_absolute) for skip in appearance_skips]
@@ -68,7 +67,7 @@ class DDModel(nn.Module):
         if self.use_kp_embedding:
             d = kp_video['mean'].shape[1]
             movement_embedding = self.main_embedding_module(kp_appearance=kp_appearance, kp_video=kp_video,
-                                                            spatial_size=spatial_size)
+                                                            appearance_frame=appearance_frame)
             kp_skips = [F.interpolate(movement_embedding, size=(d, ) + skip.shape[3:]) for skip in appearance_skips]
             skips = [torch.cat([a, b], dim=1) for a, b in zip(deformed_skips, kp_skips)]
         else:

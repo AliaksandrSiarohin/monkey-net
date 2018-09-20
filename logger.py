@@ -6,6 +6,9 @@ import os
 from modules.kp_extractor import kp2gaussian
 from skimage.draw import circle
 
+import matplotlib.pyplot as plt
+
+
 
 class Logger:
     def __init__(self, generator, log_dir, discriminator=None, optimizer_generator=None,
@@ -85,18 +88,20 @@ class Logger:
 
 
 class Visualizer:
-    def __init__(self, kp_size=2, draw_border=True):
+    def __init__(self, kp_size=2, draw_border=True, colormap='gist_rainbow'):
         self.kp_size = kp_size
         self.draw_border = draw_border
+        self.colormap = plt.get_cmap(colormap)
 
     def draw_video_with_kp(self, video, kp_array):
         video_array = np.copy(video)
         spatial_size = np.array(video_array.shape[2:0:-1])[np.newaxis, np.newaxis]
         kp_array = spatial_size * (kp_array + 1) / 2
+        num_kp = kp_array.shape[1]
         for i in range(len(video_array)):
-            for kp in kp_array[i]:
+            for kp_ind, kp in enumerate(kp_array[i]):
                 rr, cc = circle(kp[1], kp[0], self.kp_size, shape=video_array.shape[1:3])
-                video_array[i][rr, cc] = (1, 1, 1)
+                video_array[i][rr, cc] = np.array(self.colormap(kp_ind / num_kp))[:3]
         return video_array
 
     def create_video_column_with_kp(self, video, kp):

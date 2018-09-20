@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 from argparse import ArgumentParser
 import os
 import yaml

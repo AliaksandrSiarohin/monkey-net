@@ -90,21 +90,24 @@ class MovementEmbeddingModule(nn.Module):
     """
     Produce embedding for movement
     """
-    def __init__(self, num_kp, use_difference, kp_variance, learnable=False, features_per_kp=1, difference_type='absolute'):
+    def __init__(self, num_kp, use_difference, kp_variance, num_channels,
+                 use_deformed_appearance=False, learnable=False, features_per_kp=1, difference_type='absolute'):
         super(MovementEmbeddingModule, self).__init__()
 
         assert difference_type in ['absolute', 'relative']
 
         if learnable:
             self.out_channels = features_per_kp * num_kp
-            self.conv = nn.Conv2d((1 + 2 * use_difference) * num_kp, self.out_channels, kernel_size=1, groups=num_kp)
+            self.conv = nn.Conv2d((1 + 2 * use_difference + num_channels * use_deformed_appearance) * num_kp,
+                                  self.out_channels, kernel_size=1, groups=num_kp)
         else:
-            self.out_channels = (1 + 2 * use_difference) * num_kp
+            self.out_channels = (1 + 2 * use_difference + num_channels * use_deformed_appearance) * num_kp
 
         self.learnable = learnable
         self.kp_variance = kp_variance
         self.difference_type = difference_type
         self.use_difference = use_difference
+        self.use_deformed_appearance = use_deformed_appearance
 
     def combine_kp(self, kp_appearance, kp_video):
         kp_video_diff = kp_video['mean'] - kp_video['mean'][:, 0:1]
@@ -123,7 +126,8 @@ class MovementEmbeddingModule(nn.Module):
 
         return out, kp_video_diff
 
-    def forward(self, kp_appearance, kp_video, spatial_size):
+    def forward(self, kp_appearance, kp_video, appearance_frame=None):
+        spatial_size = appearance_frame.shape[3:]
         kp_video, kp_video_diff = self.combine_kp(kp_appearance, kp_video)
 
         movement_encoding = kp2gaussian(kp_video, spatial_size=spatial_size, kp_variance=self.kp_variance)
@@ -134,11 +138,28 @@ class MovementEmbeddingModule(nn.Module):
             movement_encoding = movement_encoding - movement_encoding[:, 0:1]
         bs, d, num_kp, h, w = movement_encoding.shape
 
-        if self.use_difference:
-            kp_video_diff = kp_video_diff.view((bs, d, num_kp, 2, 1, 1)).repeat(1, 1, 1, 1, h, w)
+        if self.use_difference or self.use_deformed_appearance:
             movement_encoding = movement_encoding.unsqueeze(3)
+            kp_video_diff = kp_video_diff.view((bs, d, num_kp, 2, 1, 1)).repeat(1, 1, 1, 1, h, w)
 
-            movement_encoding = torch.cat([movement_encoding, kp_video_diff], dim=3)
+            inputs = [movement_encoding]
+            if self.use_difference:
+                inputs.append(kp_video_diff)
+
+            if self.use_deformed_appearance:
+                appearance_repeat = appearance_frame.unsqueeze(1).unsqueeze(1).repeat(1, d, num_kp, 1, 1, 1, 1)
+                appearance_repeat = appearance_repeat.view(bs * d * num_kp, -1, h, w)
+
+                deformation_approx = kp_video_diff.view((bs * d * num_kp, -1, h, w)).permute(0, 2, 3, 1)
+                coordinate_grid = make_coordinate_grid((h, w), type=deformation_approx.type())
+                coordinate_grid = coordinate_grid.view(1, h, w, 2)
+                deformation_approx = coordinate_grid - deformation_approx
+
+                appearance_approx_deform = F.grid_sample(appearance_repeat, deformation_approx)
+                appearance_approx_deform = appearance_approx_deform.view((bs, d, num_kp, -1, h, w))
+                inputs.append(appearance_approx_deform)
+
+            movement_encoding = torch.cat(inputs, dim=3)
             movement_encoding = movement_encoding.view(bs, d, -1, h, w)
 
         if self.learnable:

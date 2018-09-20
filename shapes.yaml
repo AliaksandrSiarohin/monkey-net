@@ -10,7 +10,7 @@ dataset_params:
       interpolation: 'nearest'
     select_frames_param:
       reflect_pad_time: True
-      consequent: True
+      consequent: False
     crop_param:
       size: [64, 64]
 
@@ -43,8 +43,9 @@ generator_params:
   deformation_embedding_params:
     use_difference: True
     difference_type: "absolute"
-    features_per_kp: 4
-    learnable: False
+    features_per_kp: 8
+    learnable: True
+    use_deformed_appearance: False
   main_embedding_params:
     use_difference: False
     learnable: False
@@ -64,7 +65,7 @@ schedule_params:
 
 loss_weights:
   reconstruction: [10, 10, 10, 10]
-  reconstruction_deformed: [0, 0, 0, 0]
+  reconstruction_deformed: [10, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1
   tv: 0
