@@ -3,41 +3,39 @@ from torch import nn
 import torch.nn.functional as F
 
 from modules.appearance_encoder import AppearanceEncoder
-from modules.deformation_module import PredictedDeformation, AffineDeformation, IdentityDeformation
+from modules.deformation_module import DeformationModule, IdentityDeformation
 from modules.video_decoder import VideoDecoder
-from modules.kp_extractor import KPExtractor, MovementEmbeddingModule
+from modules.movement_embedding import MovementEmbeddingModule
+from modules.kp_extractor import KPExtractor
 
 
 class DDModel(nn.Module):
     """
     Deformable disentangling model for videos.
     """
-    def __init__(self, kp_extractor_module_params, deformation_module_params, main_module_params, deformation_embedding_params,
-                 main_embedding_params, num_channels, detach_deformation, deformation_type, use_kp_embedding, kp_variance, num_kp):
+    def __init__(self, num_channels, num_kp, kp_variance,
+                 kp_extractor_module_params, main_module_params,
+                 deformation_module_params=None, kp_embedding_params=None, detach_deformation=False):
         super(DDModel, self).__init__()
 
-        assert deformation_type in ['affine', 'predicted', 'none']
-
         self.appearance_encoder = AppearanceEncoder(num_channels=num_channels, **main_module_params)
-        self.deformation_embedding_module = MovementEmbeddingModule(num_kp=num_kp, num_channels=num_channels,
-                                                                    kp_variance=kp_variance, **deformation_embedding_params)
-        self.main_embedding_module = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance,
-                                                             num_channels=num_channels, **main_embedding_params)
 
-        if deformation_type == 'affine':
-            self.deformation_module = AffineDeformation(embedding_features=self.deformation_embedding_module.out_channels,
+        if kp_embedding_params is not None:
+            self.kp_embedding_module = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance,
+                                                               num_channels=num_channels, **kp_embedding_params)
+        else:
+            self.kp_embedding_module = None
+
+        if deformation_module_params is not None:
+            self.deformation_module = DeformationModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
                                                         **deformation_module_params)
-        elif deformation_type == 'predicted':
-            self.deformation_module = PredictedDeformation(embedding_features=self.deformation_embedding_module.out_channels,
-                                                           **deformation_module_params)
         else:
             self.deformation_module = IdentityDeformation()
 
-        self.video_decoder = VideoDecoder(num_channels=num_channels, embedding_features=self.main_embedding_module.out_channels,
-                                          use_kp_embedding=use_kp_embedding, **main_module_params)
+        self.video_decoder = VideoDecoder(num_channels=num_channels, embedding_features=self.kp_embedding_module.out_channels,
+                                          use_kp_embedding=kp_embedding_params is not None, **main_module_params)
         self.kp_extractor = KPExtractor(num_channels=num_channels, num_kp=num_kp, kp_variance=kp_variance,
                                         **kp_extractor_module_params)
-        self.use_kp_embedding = use_kp_embedding
         self.detach_deformation = detach_deformation
 
     def deform_input(self, inp, deformations_absolute):
@@ -53,20 +51,19 @@ class DDModel(nn.Module):
         appearance_skips = self.appearance_encoder(appearance_frame)
 
         if self.detach_deformation:
-            movement_embedding = self.deformation_embedding_module(kp_appearance={k:v.detach() for k, v in kp_appearance.items()},
+            deformations_absolute = self.deformation_module(kp_appearance={k:v.detach() for k, v in kp_appearance.items()},
                                                                    kp_video={k:v.detach() for k, v in kp_video.items()},
                                                                    appearance_frame=appearance_frame)
         else:
-            movement_embedding = self.deformation_embedding_module(kp_appearance=kp_appearance,
+            deformations_absolute = self.deformation_module(kp_appearance=kp_appearance,
                                                                    kp_video=kp_video,
                                                                    appearance_frame=appearance_frame)
 
-        deformations_absolute = self.deformation_module(movement_embedding)
         deformed_skips = [self.deform_input(skip, deformations_absolute) for skip in appearance_skips]
 
-        if self.use_kp_embedding:
+        if self.kp_embedding_module is not None:
             d = kp_video['mean'].shape[1]
-            movement_embedding = self.main_embedding_module(kp_appearance=kp_appearance, kp_video=kp_video,
+            movement_embedding = self.kp_embedding_module(kp_appearance=kp_appearance, kp_video=kp_video,
                                                             appearance_frame=appearance_frame)
             kp_skips = [F.interpolate(movement_embedding, size=(d, ) + skip.shape[3:]) for skip in appearance_skips]
             skips = [torch.cat([a, b], dim=1) for a, b in zip(deformed_skips, kp_skips)]
@@ -119,8 +116,7 @@ class DDModel(nn.Module):
         best_frame = torch.argmin(norm, dim=-1)
         return best_frame.squeeze(dim=0)
 
-
-    def transfer(self, inp):
+    def transfer(self, inp, select_best_frame=False):
         #Batch size  should be 1
         assert inp['first_video_array'].shape[0] == 1
 
@@ -130,7 +126,10 @@ class DDModel(nn.Module):
         kp_video = self.kp_extractor(motion_video)
         kp_appearance = self.kp_extractor(appearance_frame)
 
-        best_frame = self.select_best_frame(kp_video['mean'], kp_appearance['mean'])
+        if select_best_frame:
+            best_frame = self.select_best_frame(kp_video['mean'], kp_appearance['mean'])
+        else:
+            best_frame = 0
 
         reverse_sample = range(0, best_frame + 1)[::-1]
         first_video_seq = {k: v[:, reverse_sample] for k, v in kp_video.items()}

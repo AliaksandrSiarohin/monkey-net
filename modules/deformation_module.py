@@ -1,86 +1,111 @@
 from torch import nn
 import torch.nn.functional as F
 import torch
-from modules.util import Hourglass, make_coordinate_grid, Encoder
-
-
-class PredictedDeformation(nn.Module):
-    """
-    Deformation module receive first frame and keypoints difference heatmap. It has hourglass architecture.
-    """
-    def __init__(self, block_expansion, number_of_blocks, max_features, embedding_features, cumsum=False, relative=False):
-        super(PredictedDeformation, self).__init__()
-        self.predictor = Hourglass(block_expansion=block_expansion, in_features=embedding_features, out_features=2,
-                                   max_features=max_features, dim=3, number_of_blocks=number_of_blocks)
-        self.predictor.decoder.conv.weight.data.zero_()
-        self.predictor.decoder.conv.bias.data.zero_()
-
-        self.cumsum = cumsum
-        self.relative = relative
-
-    def forward(self, movement_embedding):
-        h, w = movement_embedding.shape[3:]
-
-        deformations_relative = self.predictor(movement_embedding)
-        deformations_relative = deformations_relative.permute(0, 2, 3, 4, 1)
-
-        if self.cumsum:
-            deformations_relative = deformations_relative.cumsum(dim=1)
-
-        if self.relative:
-            deformation = deformations_relative
-        else:
-            coordinate_grid = make_coordinate_grid((h, w), type=deformations_relative.type())
-            coordinate_grid = coordinate_grid.view(1, 1, h, w, 2)
-            deformation = deformations_relative + coordinate_grid
-        z_coordinate = torch.zeros(deformation.shape[:-1] + (1, )).type(deformation.type())
-
-        return torch.cat([deformation, z_coordinate], dim=-1)
+from modules.util import Hourglass, make_coordinate_grid, Encoder, SameBlock3D
+from modules.movement_embedding import MovementEmbeddingModule
 
 
 class AffineDeformation(nn.Module):
     """
     Deformation module receive keypoint cordinates and try to predict values for affine deformation. It has MPL architecture.
     """
-    def __init__(self, block_expansion, number_of_blocks, max_features, embedding_features, cumsum):
+    def __init__(self, num_kp, num_blocks=3):
         super(AffineDeformation, self).__init__()
 
-        self.encoder = Encoder(block_expansion, in_features=embedding_features, max_features=max_features,
-                               dim=2, number_of_blocks=number_of_blocks)
+        blocks = []
+        for i in range(num_blocks):
+            blocks.append(nn.Conv1d((2 ** i) * 2 * num_kp, ((2 ** (i + 1)) * 2 * num_kp if i != num_blocks - 1 else 6),
+                                    kernel_size=1))
 
-        self.linear = nn.Linear(in_features=self.encoder.down_blocks[-1].out_features, out_features=6)
+        self.blocks = nn.ModuleList(blocks)
+        self.blocks[-1].weight.data.zero_()
+        self.blocks[-1].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
 
-        self.linear.weight.data.zero_()
-        self.linear.bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
-        self.cumsum = cumsum
+    def forward(self, difference_embedding):
+        bs, c, d, h, w = difference_embedding.shape
 
-    def forward(self, movement_embedding):
-        bs, c, d, h, w = movement_embedding.shape[3:]
+        out = difference_embedding[..., 0, 0]
 
-        out = self.encoder(movement_embedding)
-        out = out.permute(0, 2, 1, 3, 4).view(bs * d, c, h, w)
-        out = out.mean(dim=(2, 3))
-        out = self.linear(out)
+        for block in self.blocks:
+            out = block(out)
+            out = F.leaky_relu(out, 0.2)
+        out = out.view(-1, 2, 3)
 
         deformations_absolute = F.affine_grid(out, torch.Size((out.shape[0], 3, h, w)))
+        deformations_absolute = deformations_absolute.view((bs, 1, d, h, w, -1))
 
-        deformations_absolute = deformations_absolute.view(bs, d, h, w, 2)
+        return deformations_absolute.permute(0, 1, 5, 2, 3, 4)
 
-        if self.cumsum:
-            coordinate_grid = make_coordinate_grid((h, w), type=deformations_absolute.type())
-            coordinate_grid = coordinate_grid.view(1, 1, h, w, 2)
-            deformation_relative = deformations_absolute - coordinate_grid
-            deformation_relative = deformation_relative.cumsum(dim=1)
-            deformations_absolute = deformation_relative + coordinate_grid
 
-        z_coordinate = torch.zeros(deformations_absolute.shape[:-1] + (1, )).type(deformations_absolute.type())
-        return torch.cat([deformations_absolute, z_coordinate], dim=-1)
+class DeformationModule(nn.Module):
+    """
+    Deformation module, predict deformation, that will be applied to skip connections.
+    """
+    def __init__(self, block_expansion, num_blocks, max_features, mask_embedding_params, num_kp,
+                 num_channels, kp_variance, num_group_blocks, camera_params=None):
+        super(DeformationModule, self).__init__()
+        self.mask_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
+                                                       **mask_embedding_params)
+        self.difference_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
+                                                            use_difference=True, use_heatmap=False, use_deformed_appearance=False)
+
+        group_blocks = []
+        for i in range(num_group_blocks):
+            group_blocks.append(SameBlock3D(self.mask_embedding.out_channels, self.mask_embedding.out_channels,
+                                            groups=num_kp, kernel_size=(1, 1, 1), padding=(0, 0, 0)))
+        self.group_blocks = nn.ModuleList(group_blocks)
+
+        self.hourglass = Hourglass(block_expansion=block_expansion, in_features=self.mask_embedding.out_channels,
+                                   out_features=(num_kp + 1) + 2, max_features=max_features, dim=3,
+                                   num_blocks=num_blocks)
+        self.hourglass.decoder.conv.weight.data.zero_()
+        self.hourglass.decoder.conv.bias.data.zero_()
+
+        if camera_params is not None:
+            self.camera_module = AffineDeformation(num_kp=num_kp, **camera_params)
+        else:
+            self.camera_module = None
+        self.num_kp = num_kp
+
+    def forward(self, kp_appearance, kp_video, appearance_frame):
+        prediction = self.mask_embedding(kp_appearance, kp_video, appearance_frame)
+        for block in self.group_blocks:
+            prediction = block(prediction)
+            prediction = F.leaky_relu(prediction, 0.2)
+        prediction = self.hourglass(prediction)
+
+        mask, correction = prediction[:, :(self.num_kp + 1)], prediction[:, (self.num_kp + 1):]
+        mask = F.softmax(mask, dim=1)
+        mask = mask.unsqueeze(2)
+
+        difference_embedding = self.difference_embedding(kp_appearance, kp_video, appearance_frame)
+        bs, _, d, h, w = difference_embedding.shape
+        if self.camera_module is None:
+            shape = (bs, 1, 2, d, h, w)
+            camera_prediction = torch.zeros(shape).type(difference_embedding.type())
+        else:
+            camera_prediction = self.camera_module(difference_embedding)
+
+        difference_embedding = torch.cat([difference_embedding.view(bs, self.num_kp, 2, d, h, w), camera_prediction], dim=1)
+
+        deformations_relative = (difference_embedding * mask).sum(dim=1)
+        deformations_relative = deformations_relative + correction
+        deformations_relative = deformations_relative.permute(0, 2, 3, 4, 1)
+
+        coordinate_grid = make_coordinate_grid((h, w), type=deformations_relative.type())
+        coordinate_grid = coordinate_grid.view(1, 1, h, w, 2)
+        deformation = deformations_relative + coordinate_grid
+        z_coordinate = torch.zeros(deformation.shape[:-1] + (1, )).type(deformation.type())
+
+        return torch.cat([deformation, z_coordinate], dim=-1)
+
 
 
 class IdentityDeformation(nn.Module):
-    def forward(self, movement_embedding):
-        bs, c, d, h, w = movement_embedding.shape
-        coordinate_grid = make_coordinate_grid((h, w), type=movement_embedding.type())
+    def forward(self, kp_appearance, kp_video, appearance_frame):
+        bs, _, _, h, w = appearance_frame.shape
+        _, d, num_kp, _ = kp_video['mean'].shape
+        coordinate_grid = make_coordinate_grid((h, w), type=appearance_frame.type())
         coordinate_grid = coordinate_grid.view(1, 1, h, w, 2).repeat(bs, d, 1, 1, 1)
 
         z_coordinate = torch.zeros(coordinate_grid.shape[:-1] + (1, )).type(coordinate_grid.type())

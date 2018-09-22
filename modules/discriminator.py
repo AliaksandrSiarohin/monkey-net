@@ -36,11 +36,11 @@ class Discriminator(nn.Module):
     """
     Extractor of keypoints. Return kp feature maps.
     """
-    def __init__(self, block_expansion=64, num_channels=3, number_of_blocks=4, max_features=512, kernel_size=4):
+    def __init__(self, block_expansion=64, num_channels=3, num_blocks=4, max_features=512, kernel_size=4):
         super(Discriminator, self).__init__()
 
         down_blocks = []
-        for i in range(number_of_blocks):
+        for i in range(num_blocks):
             down_blocks.append(DownBlock3D(num_channels if i == 0 else min(max_features, block_expansion * (2 ** i)),
                                            min(max_features, block_expansion * (2 ** (i + 1))),
                                            norm=(i != 0),

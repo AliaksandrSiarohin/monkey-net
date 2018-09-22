@@ -9,17 +9,18 @@ from skimage.draw import circle
 import matplotlib.pyplot as plt
 
 
-
 class Logger:
     def __init__(self, generator, log_dir, discriminator=None, optimizer_generator=None,
-                 optimizer_discriminator=None, log_file_name='log.txt', log_freq=100, cpk_freq=1000, fill_counter=8):
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        self.log_dir = log_dir
+                 optimizer_discriminator=None, log_file_name='log.txt', log_freq_iter=100, cpk_freq_epoch=1000, fill_counter=8):
+
         self.loss_list = []
+        self.cpk_dir = log_dir
+        self.visualizations_dir = os.path.join(log_dir, 'train-vis')
+        if not os.path.exists(self.visualizations_dir):
+            os.makedirs(self.visualizations_dir)
         self.log_file = open(os.path.join(log_dir, log_file_name), 'a')
-        self.log_freq = log_freq
-        self.cpk_freq = cpk_freq
+        self.log_freq = log_freq_iter
+        self.cpk_freq = cpk_freq_epoch
         self.fill_counter = fill_counter
 
         self.generator = generator
@@ -27,6 +28,7 @@ class Logger:
         self.optimizer_generator = optimizer_generator
         self.optimizer_discriminator = optimizer_discriminator
 
+        self.epoch = 0
         self.it = 0
 
     def log_scores(self, loss_names):
@@ -42,7 +44,7 @@ class Logger:
     def visualize_rec(self, inp):
         out = self.generator(inp)
         image = Visualizer().visualize_reconstruction(inp, out)
-        imageio.mimsave(os.path.join(self.log_dir, "%s-rec.gif" % str(self.it).zfill(self.fill_counter)), image)
+        imageio.mimsave(os.path.join(self.visualizations_dir, "%s-rec.gif" % str(self.it).zfill(self.fill_counter)), image)
 
     def save_cpk(self):
         d = {"generator": self.generator.state_dict(),
@@ -50,7 +52,7 @@ class Logger:
              "discriminator": self.discriminator.state_dict(),
              "optimizer_discriminator": self.optimizer_discriminator.state_dict(),
              "iter": self.it}
-        torch.save(d, os.path.join(self.log_dir, '%s-checkpoint.pth.tar' % str(self.it).zfill(self.fill_counter)))
+        torch.save(d, os.path.join(self.cpk_dir, '%s-checkpoint.pth.tar' % str(self.epoch).zfill(self.fill_counter)))
 
     @staticmethod
     def load_cpk(checkpoint_path, generator, discriminator=None,
@@ -72,18 +74,17 @@ class Logger:
         self.save_cpk()
         self.log_file.close()
 
-    def save_values(self, names, values):
+    def log_iter(self, it, names, values, inp):
+        self.it = it
         self.names = names
         self.loss_list.append(values)
-
-    def log(self, it, inp):
-        self.it = it
         if it % self.log_freq == 0:
             self.log_scores(self.names)
             self.visualize_rec(inp)
-            #self.visualize_transfer(inp)
 
-        if it % self.cpk_freq == 0:
+    def log_epoch(self, epoch):
+        self.epoch = epoch
+        if epoch % self.cpk_freq == 0:
             self.save_cpk()
 
 

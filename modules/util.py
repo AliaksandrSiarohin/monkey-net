@@ -83,14 +83,12 @@ class UpBlock3D(nn.Module):
         return out
 
 
-
 class DownBlock3D(nn.Module):
     """
     Simple block for processing video (encoder).
     """
     def __init__(self, in_features, out_features, kernel_size=3, padding=1):
         super(DownBlock3D, self).__init__()
-
         self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features, kernel_size=kernel_size, padding=padding)
         self.norm = nn.InstanceNorm3d(out_features, affine=True)
         self.pool = nn.AvgPool3d(kernel_size=(1, 2, 2))
@@ -103,18 +101,35 @@ class DownBlock3D(nn.Module):
         return out
 
 
+class SameBlock3D(nn.Module):
+    """
+    Simple block with group convolution.
+    """
+    def __init__(self, in_features, out_features, groups=None, kernel_size=3, padding=1):
+        super(SameBlock3D, self).__init__()
+        self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features,
+                              kernel_size=kernel_size, padding=padding, groups=groups)
+        self.norm = nn.InstanceNorm3d(out_features, affine=True)
+
+    def forward(self, x):
+        out = self.conv(x)
+        out = self.norm(out)
+        out = F.relu(out)
+        return out
+
+
 class Encoder(nn.Module):
     """
     Hourglass Encoder
     """
-    def __init__(self, block_expansion, in_features, number_of_blocks=3, max_features=256, dim=2):
+    def __init__(self, block_expansion, in_features, num_blocks=3, max_features=256, dim=2):
         super(Encoder, self).__init__()
 
         down_blocks = []
 
         kernel_size = (3, 3, 3) if dim == 3 else (1, 3, 3)
         padding = (1, 1, 1) if dim == 3 else (0, 1, 1)
-        for i in range(number_of_blocks):
+        for i in range(num_blocks):
             down_blocks.append(DownBlock3D(in_features if i == 0 else min(max_features, block_expansion * (2 ** i)),
                                            min(max_features, block_expansion * (2 ** (i + 1))),
                                            kernel_size=kernel_size, padding=padding))
@@ -132,7 +147,7 @@ class Decoder(nn.Module):
     """
     Hourglass Decoder
     """
-    def __init__(self, block_expansion, in_features, out_features, number_of_blocks=3, max_features=256, dim=2,
+    def __init__(self, block_expansion, in_features, out_features, num_blocks=3, max_features=256, dim=2,
                  additional_features_for_block=0):
         super(Decoder, self).__init__()
         kernel_size = (3, 3, 3) if dim == 3 else (1, 3, 3)
@@ -140,8 +155,8 @@ class Decoder(nn.Module):
 
         up_blocks = []
 
-        for i in range(number_of_blocks)[::-1]:
-            up_blocks.append(UpBlock3D((1 if i == number_of_blocks - 1 else 2) * min(max_features, block_expansion * (2 ** (i + 1))) + additional_features_for_block,
+        for i in range(num_blocks)[::-1]:
+            up_blocks.append(UpBlock3D((1 if i == num_blocks - 1 else 2) * min(max_features, block_expansion * (2 ** (i + 1))) + additional_features_for_block,
                                        min(max_features, block_expansion * (2 ** i)),
                                        kernel_size=kernel_size, padding=padding))
 
@@ -161,10 +176,10 @@ class Hourglass(nn.Module):
     """
     Hourglass architecture.
     """
-    def __init__(self, block_expansion, in_features, out_features, number_of_blocks=3, max_features=256, dim=2):
+    def __init__(self, block_expansion, in_features, out_features, num_blocks=3, max_features=256, dim=2):
         super(Hourglass, self).__init__()
-        self.encoder = Encoder(block_expansion, in_features, number_of_blocks, max_features, dim)
-        self.decoder = Decoder(block_expansion, in_features, out_features, number_of_blocks, max_features, dim)
+        self.encoder = Encoder(block_expansion, in_features, num_blocks, max_features, dim)
+        self.decoder = Decoder(block_expansion, in_features, out_features, num_blocks, max_features, dim)
 
     def forward(self, x):
         return self.decoder(self.encoder(x))

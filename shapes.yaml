@@ -16,46 +16,42 @@ dataset_params:
 
 
 log_params:
-  log_freq: 20
-  cpk_freq: 10000
+  log_freq_iter: 50
+  cpk_freq_epoch: 10000
+
+transfer_params:
+  select_best_frame: False
 
 generator_params:
   num_kp: 10
-  kp_variance: "learned"
-  deformation_type: "predicted"
+  kp_variance: 0.01
   num_channels: 3
-  use_kp_embedding: True
-  detach_deformation: True
   kp_extractor_module_params:
     temperature: 0.1
     block_expansion: 16
     max_features: 128
-    number_of_blocks: 5
-  deformation_module_params:
+    num_blocks: 5
+  deformation_module_params: null
     block_expansion: 16
-    max_features: 64
-    number_of_blocks: 3
-    cumsum: False
+    max_features: 128
+    num_blocks: 3
+    mask_embedding_params:
+      use_heatmap: True
+      use_deformed_appearance: True
+    num_group_blocks: 2
+    camera_params: null
   main_module_params:
     block_expansion: 16
     max_features: 128
-    number_of_blocks: 5
-  deformation_embedding_params:
-    use_difference: True
-    difference_type: "absolute"
-    features_per_kp: 16
-    learnable: True
-    use_deformed_appearance: False
-    aggregation_type: "sum"
-  main_embedding_params:
-    use_difference: False
-    learnable: False
+    num_blocks: 5
+  kp_embedding_params:
+    use_heatmap: True
 
 discriminator_params:
   block_expansion: 32
   num_channels: 3
   max_features: 128
-  number_of_blocks: 3
+  num_blocks: 3
 
 schedule_params:
   num_epochs: [1, 1, 1, 1, 1]
@@ -66,11 +62,11 @@ schedule_params:
 
 loss_weights:
   reconstruction: [10, 10, 10, 10]
-  reconstruction_deformed: [0, 0, 0, 0]
-  generator_gan: 1
-  discriminator_gan: 1
+  reconstruction_deformed: [10, 10, 10, 10]
+  generator_gan: 0
+  discriminator_gan: 0
   tv: 0
   tv_border: 1
   kp_movement: 0
-  var_reg: 0.01
+  var_reg: 0
   var_target: 0.01

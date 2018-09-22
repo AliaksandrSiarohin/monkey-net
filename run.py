@@ -21,6 +21,7 @@ import imageio
 from torch.autograd import Variable
 
 import warnings
+from shutil import copy
 
 
 def set_optimizer_lr(optimizer, lr):
@@ -29,7 +30,7 @@ def set_optimizer_lr(optimizer, lr):
 
 
 def train(config, generator, discriminator, checkpoint, log_dir, dataset):
-    start_iter = 0
+    start_epoch = 0
     optimizer_generator = torch.optim.Adam(generator.parameters(), betas=(0.5, 0.999))
     optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), betas=(0.5, 0.999))
 
@@ -38,7 +39,7 @@ def train(config, generator, discriminator, checkpoint, log_dir, dataset):
 
     epochs_milestones = np.cumsum(config['schedule_params']['num_epochs'])
 
-    schedule_iter = np.searchsorted(epochs_milestones, start_iter)
+    schedule_iter = np.searchsorted(epochs_milestones, start_epoch)
     dataloader = DataLoader(dataset, batch_size=config['schedule_params']['batch_size'][schedule_iter],
                             shuffle=True, num_workers=4)
     set_optimizer_lr(optimizer_generator, config['schedule_params']['lr_generator'][schedule_iter])
@@ -48,7 +49,7 @@ def train(config, generator, discriminator, checkpoint, log_dir, dataset):
 
     with Logger(generator=generator, discriminator=discriminator, optimizer_generator=optimizer_generator,
                 optimizer_discriminator=optimizer_discriminator, log_dir=log_dir, **config['log_params']) as logger:
-        for it in trange(start_iter, epochs_milestones[-1]):
+        for epoch in trange(start_epoch, epochs_milestones[-1]):
             for i, x in enumerate(dataloader):
                 x = {k: Variable(x[k], requires_grad=True) for k,v in x.items()}
                 generated = generator(x)
@@ -92,11 +93,11 @@ def train(config, generator, discriminator, checkpoint, log_dir, dataset):
                 optimizer_discriminator.step()
                 optimizer_discriminator.zero_grad()
 
-                logger.save_values(gen_loss_names + disc_loss_names, gen_loss_values + disc_loss_values)
-                logger.log(i, inp=x)
+                logger.log_iter(i, names=gen_loss_names + disc_loss_names,
+                                values=gen_loss_values + disc_loss_values,inp=x)
 
-            if it in epochs_milestones:
-                schedule_iter = np.searchsorted(epochs_milestones, it, side='right')
+            if epoch in epochs_milestones:
+                schedule_iter = np.searchsorted(epochs_milestones, epoch, side='right')
                 lr_generator = config['schedule_params']['lr_generator'][schedule_iter]
                 lr_discriminator = config['schedule_params']['lr_discriminator'][schedule_iter]
                 bs = config['schedule_params']['batch_size'][schedule_iter]
@@ -107,10 +108,11 @@ def train(config, generator, discriminator, checkpoint, log_dir, dataset):
                 set_optimizer_lr(optimizer_discriminator, lr_discriminator)
                 dataset.set_number_of_frames_per_sample(frames_per_sample)
 
-            logger.log(it, inp=x)
+            logger.log_epoch(epoch)
 
 
-def test(config, generator, checkpoint, log_dir, dataset):
+def reconstruction(config, generator, checkpoint, log_dir, dataset):
+    log_dir = os.path.join(log_dir, 'reconstruction')
     if checkpoint is not None:
         Logger.load_cpk(checkpoint, generator=generator)
     else:
@@ -134,6 +136,7 @@ def test(config, generator, checkpoint, log_dir, dataset):
 
 
 def transfer(config, generator, checkpoint, log_dir, dataset):
+    log_dir = os.path.join(log_dir, 'transfer')
     dataset = PairedDataset(initial_dataset=dataset, number_of_pairs=100)
     dataloader = DataLoader(dataset, batch_size=1,
                             shuffle=True, num_workers=1)
@@ -150,7 +153,7 @@ def transfer(config, generator, checkpoint, log_dir, dataset):
     for it, x in tqdm(enumerate(dataloader)):
         with torch.no_grad():
             x = {key: value.cuda() for key,value in x.items()}
-            out = model.transfer(x)
+            out = model.transfer(x, config['transfer_params']['select_best_frame'])
             image = Visualizer().visualize_transfer(inp=x, out=out)
             imageio.mimsave(os.path.join(log_dir, str(it).zfill(8) + '.gif'), image)
 
@@ -158,7 +161,7 @@ def transfer(config, generator, checkpoint, log_dir, dataset):
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--config", required=True, help="path to config")
-    parser.add_argument("--mode", default="train", choices=["train", "test", "transfer"])
+    parser.add_argument("--mode", default="train", choices=["train", "reconstruction", "transfer"])
     parser.add_argument("--log_dir", default='log', help="path to log into")
     parser.add_argument("--checkpoint", default=None, help="path to checkpoint to restore")
     parser.add_argument("--device_ids", default="0", type=lambda x: list(map(int, x.split(','))),
@@ -168,22 +171,36 @@ if __name__ == "__main__":
     with open(opt.config) as f:
         config = yaml.load(f)
 
-    log_dir = os.path.join(opt.log_dir, opt.config.split('.')[0] + '-' + opt.mode + ' ' + strftime("%d-%m-%y %H:%M:%S", gmtime()))
+    if opt.checkpoint is not None:
+        log_dir = os.path.join(*os.path.split(opt.checkpoint)[:-1])
+    else:
+        log_dir = os.path.join(opt.log_dir, os.path.basename(opt.config).split('.')[0] + ' ' + strftime("%d-%m-%y %H:%M:%S", gmtime()))
+
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    if not os.path.exists(os.path.join(log_dir, os.path.basename(opt.config))):
+        copy(opt.config, log_dir)
 
     generator = DDModel(**config['generator_params'])
     generator = torch.nn.DataParallel(module=generator, device_ids=opt.device_ids)
 
+    print("Generator...")
+    print(generator)
+
     discriminator = Discriminator(**config['discriminator_params'])
     discriminator = torch.nn.DataParallel(module=discriminator, device_ids=opt.device_ids)
+
+    print("Discriminator...")
+    print(discriminator)
 
     dataset = FramesDataset(is_train=(opt.mode == 'train'), **config['dataset_params'])
 
     if opt.mode == 'train':
         print ("Start model training...")
         train(config, generator, discriminator, opt.checkpoint, log_dir, dataset)
-    elif opt.mode == 'test':
+    elif opt.mode == 'reconstruction':
         print ("Start model testing...")
-        test(config, generator, opt.checkpoint, log_dir, dataset)
+        reconstruction(config, generator, opt.checkpoint, log_dir, dataset)
     elif opt.mode == 'transfer':
         print ("Transfering motion...")
         transfer(config, generator, opt.checkpoint, log_dir, dataset)

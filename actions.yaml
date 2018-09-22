@@ -4,11 +4,6 @@ dataset_params:
   classes_list: data/actions.csv
   augmentation_param:
     flip_param: True
-#    rotation_param:
-#      degrees: [-10, 10]
-#    resize_param:
-#      ratio : [0.75, 1.25]
-#      interpolation: 'nearest'
     select_frames_param:
       reflect_pad_time: True
       consequent: False
@@ -16,46 +11,42 @@ dataset_params:
       size: [64, 64]
 
 log_params:
-  log_freq: 50
-  cpk_freq: 1000
+  log_freq_iter: 200
+  cpk_freq_epoch: 1000
+
+transfer_param:
+  select_best_frame: True
 
 generator_params:
   num_kp: 10
   kp_variance: 0.01
-  deformation_type: "predicted"
   num_channels: 3
-  use_kp_embedding: True
-  detach_deformation: False
   kp_extractor_module_params:
     temperature: 0.1
     block_expansion: 16
     max_features: 128
-    number_of_blocks: 5
+    num_blocks: 5
   deformation_module_params:
-    block_expansion: 32
-    max_features: 64
-    number_of_blocks: 3
-    cumsum: False
+    block_expansion: 16
+    max_features: 128
+    num_blocks: 3
+    mask_embedding_params:
+      use_heatmap: True
+      use_deformed_appearance: True
+    num_group_blocks: 2
+    camera_params: null
   main_module_params:
     block_expansion: 16
     max_features: 128
-    number_of_blocks: 5
-  deformation_embedding_params:
-    use_difference: True
-    difference_type: "absolute"
-    features_per_kp: 4
-    learnable: True
-  main_embedding_params:
-    use_difference: False
-    difference_type: "absolute"
-    features_per_kp: 1
-    learnable: False
+    num_blocks: 5
+  kp_embedding_params:
+    use_heatmap: True
 
 discriminator_params:
   block_expansion: 32
   num_channels: 3
   max_features: 256
-  number_of_blocks: 4
+  num_blocks: 4
 
 schedule_params:
   num_epochs: [5000, 500, 300, 100, 100, 100, 1000]
@@ -69,6 +60,8 @@ loss_weights:
   reconstruction_deformed: [10, 10, 10, 10, 1]
   generator_gan: 1
   discriminator_gan: 1
-  tv: 0.1
+  tv: 0
   tv_border: 1
-  kp_movement: 1
+  kp_movement: 0
+  var_reg: 0
+  var_target: 0.01

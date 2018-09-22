@@ -20,11 +20,11 @@ class VideoDecoder(nn.Module):
     """
     Video decoder, take deformed feature maps and reconstruct a video.
     """
-    def __init__(self, block_expansion, num_channels, max_features, number_of_blocks,
+    def __init__(self, block_expansion, num_channels, max_features, num_blocks,
                  embedding_features, use_kp_embedding):
         super(VideoDecoder, self).__init__()
         self.decoder = Decoder(block_expansion=block_expansion, in_features=num_channels,
-                               out_features=num_channels, max_features=max_features, number_of_blocks=number_of_blocks,
+                               out_features=num_channels, max_features=max_features, num_blocks=num_blocks,
                                dim=3, additional_features_for_block=embedding_features * int(use_kp_embedding))
 
     def forward(self, x):
