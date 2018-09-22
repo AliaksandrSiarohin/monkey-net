@@ -31,10 +31,12 @@ generator_params:
     block_expansion: 16
     max_features: 128
     num_blocks: 5
-  deformation_module_params: null
+  deformation_module_params:
     block_expansion: 16
     max_features: 128
     num_blocks: 3
+    use_mask: True
+    use_correction: True
     mask_embedding_params:
       use_heatmap: True
       use_deformed_appearance: True

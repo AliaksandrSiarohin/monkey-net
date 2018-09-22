@@ -35,7 +35,7 @@ def train(config, generator, discriminator, checkpoint, log_dir, dataset):
     optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), betas=(0.5, 0.999))
 
     if checkpoint is not None:
-        start_iter = Logger.load_cpk(checkpoint, generator, discriminator, optimizer_generator, optimizer_discriminator)
+        start_epoch = Logger.load_cpk(checkpoint, generator, discriminator, optimizer_generator, optimizer_discriminator)
 
     epochs_milestones = np.cumsum(config['schedule_params']['num_epochs'])
 
@@ -93,7 +93,7 @@ def train(config, generator, discriminator, checkpoint, log_dir, dataset):
                 optimizer_discriminator.step()
                 optimizer_discriminator.zero_grad()
 
-                logger.log_iter(i, names=gen_loss_names + disc_loss_names,
+                logger.log_iter(i + epoch * dataloader.__len__(), names=gen_loss_names + disc_loss_names,
                                 values=gen_loss_values + disc_loss_values,inp=x)
 
             if epoch in epochs_milestones:

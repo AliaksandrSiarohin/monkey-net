@@ -42,10 +42,10 @@ class DeformationModule(nn.Module):
     Deformation module, predict deformation, that will be applied to skip connections.
     """
     def __init__(self, block_expansion, num_blocks, max_features, mask_embedding_params, num_kp,
-                 num_channels, kp_variance, num_group_blocks, camera_params=None):
+                 num_channels, kp_variance, num_group_blocks, use_correction, use_mask, camera_params=None):
         super(DeformationModule, self).__init__()
         self.mask_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
-                                                       **mask_embedding_params)
+                                                      **mask_embedding_params)
         self.difference_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
                                                             use_difference=True, use_heatmap=False, use_deformed_appearance=False)
 
@@ -56,8 +56,8 @@ class DeformationModule(nn.Module):
         self.group_blocks = nn.ModuleList(group_blocks)
 
         self.hourglass = Hourglass(block_expansion=block_expansion, in_features=self.mask_embedding.out_channels,
-                                   out_features=(num_kp + 1) + 2, max_features=max_features, dim=3,
-                                   num_blocks=num_blocks)
+                                   out_features=(num_kp + 1) * use_mask + 2 * use_correction,
+                                   max_features=max_features, dim=3, num_blocks=num_blocks)
         self.hourglass.decoder.conv.weight.data.zero_()
         self.hourglass.decoder.conv.bias.data.zero_()
 
@@ -66,6 +66,8 @@ class DeformationModule(nn.Module):
         else:
             self.camera_module = None
         self.num_kp = num_kp
+        self.use_correction = use_correction
+        self.use_mask = use_mask
 
     def forward(self, kp_appearance, kp_video, appearance_frame):
         prediction = self.mask_embedding(kp_appearance, kp_video, appearance_frame)
@@ -74,21 +76,28 @@ class DeformationModule(nn.Module):
             prediction = F.leaky_relu(prediction, 0.2)
         prediction = self.hourglass(prediction)
 
-        mask, correction = prediction[:, :(self.num_kp + 1)], prediction[:, (self.num_kp + 1):]
-        mask = F.softmax(mask, dim=1)
-        mask = mask.unsqueeze(2)
+        if self.use_mask:
+            mask = prediction[:, :(self.num_kp + 1)]
+            mask = F.softmax(mask, dim=1)
+            mask = mask.unsqueeze(2)
+            difference_embedding = self.difference_embedding(kp_appearance, kp_video, appearance_frame)
+            bs, _, d, h, w = difference_embedding.shape
+            if self.camera_module is None:
+                shape = (bs, 1, 2, d, h, w)
+                camera_prediction = torch.zeros(shape).type(difference_embedding.type())
+            else:
+                camera_prediction = self.camera_module(difference_embedding)
 
-        difference_embedding = self.difference_embedding(kp_appearance, kp_video, appearance_frame)
-        bs, _, d, h, w = difference_embedding.shape
-        if self.camera_module is None:
-            shape = (bs, 1, 2, d, h, w)
-            camera_prediction = torch.zeros(shape).type(difference_embedding.type())
+            difference_embedding = torch.cat([difference_embedding.view(bs, self.num_kp, 2, d, h, w), camera_prediction], dim=1)
+            deformations_relative = (difference_embedding * mask).sum(dim=1)
         else:
-            camera_prediction = self.camera_module(difference_embedding)
+            deformations_relative = 0
 
-        difference_embedding = torch.cat([difference_embedding.view(bs, self.num_kp, 2, d, h, w), camera_prediction], dim=1)
+        if self.use_correction:
+            correction = prediction[:, -2:]
+        else:
+            correction = 0
 
-        deformations_relative = (difference_embedding * mask).sum(dim=1)
         deformations_relative = deformations_relative + correction
         deformations_relative = deformations_relative.permute(0, 2, 3, 4, 1)
 
