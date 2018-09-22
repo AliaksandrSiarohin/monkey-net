@@ -59,7 +59,8 @@ class DeformationModule(nn.Module):
                                    out_features=(num_kp + 1) * use_mask + 2 * use_correction,
                                    max_features=max_features, dim=3, num_blocks=num_blocks)
         self.hourglass.decoder.conv.weight.data.zero_()
-        self.hourglass.decoder.conv.bias.data.zero_()
+        bias_init = ([10] + [0] * num_kp) * use_mask + [0, 0] * use_correction
+        self.hourglass.decoder.conv.bias.data.copy_(torch.tensor(bias_init, dtype=torch.float))
 
         if camera_params is not None:
             self.camera_module = AffineDeformation(num_kp=num_kp, **camera_params)
@@ -88,7 +89,7 @@ class DeformationModule(nn.Module):
             else:
                 camera_prediction = self.camera_module(difference_embedding)
 
-            difference_embedding = torch.cat([difference_embedding.view(bs, self.num_kp, 2, d, h, w), camera_prediction], dim=1)
+            difference_embedding = torch.cat([camera_prediction, difference_embedding.view(bs, self.num_kp, 2, d, h, w)], dim=1)
             deformations_relative = (difference_embedding * mask).sum(dim=1)
         else:
             deformations_relative = 0

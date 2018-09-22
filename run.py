@@ -184,13 +184,11 @@ if __name__ == "__main__":
     generator = DDModel(**config['generator_params'])
     generator = torch.nn.DataParallel(module=generator, device_ids=opt.device_ids)
 
-    print("Generator...")
     print(generator)
 
     discriminator = Discriminator(**config['discriminator_params'])
     discriminator = torch.nn.DataParallel(module=discriminator, device_ids=opt.device_ids)
 
-    print("Discriminator...")
     print(discriminator)
 
     dataset = FramesDataset(is_train=(opt.mode == 'train'), **config['dataset_params'])
