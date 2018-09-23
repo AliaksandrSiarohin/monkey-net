@@ -59,7 +59,7 @@ class DeformationModule(nn.Module):
                                    out_features=(num_kp + 1) * use_mask + 2 * use_correction,
                                    max_features=max_features, dim=3, num_blocks=num_blocks)
         self.hourglass.decoder.conv.weight.data.zero_()
-        bias_init = ([10] + [0] * num_kp) * use_mask + [0, 0] * use_correction
+        bias_init = ([2] + [0] * num_kp) * use_mask + [0, 0] * use_correction
         self.hourglass.decoder.conv.bias.data.copy_(torch.tensor(bias_init, dtype=torch.float))
 
         if camera_params is not None:
@@ -76,13 +76,12 @@ class DeformationModule(nn.Module):
             prediction = block(prediction)
             prediction = F.leaky_relu(prediction, 0.2)
         prediction = self.hourglass(prediction)
-
+        bs, _, d, h, w = prediction.shape
         if self.use_mask:
             mask = prediction[:, :(self.num_kp + 1)]
             mask = F.softmax(mask, dim=1)
             mask = mask.unsqueeze(2)
-            difference_embedding = self.difference_embedding(kp_appearance, kp_video, appearance_frame)
-            bs, _, d, h, w = difference_embedding.shape
+            difference_embedding = self.difference_embedding(kp_appearance, kp_video, appearance_frame) 
             if self.camera_module is None:
                 shape = (bs, 1, 2, d, h, w)
                 camera_prediction = torch.zeros(shape).type(difference_embedding.type())

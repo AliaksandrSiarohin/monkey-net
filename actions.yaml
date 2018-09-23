@@ -6,7 +6,7 @@ dataset_params:
     flip_param: True
     select_frames_param:
       reflect_pad_time: True
-      consequent: False
+      consequent: True
     crop_param:
       size: [64, 64]
 
@@ -21,6 +21,7 @@ generator_params:
   num_kp: 10
   kp_variance: 0.01
   num_channels: 3
+  detach_deformation: False
   kp_extractor_module_params:
     temperature: 0.1
     block_expansion: 16
@@ -35,7 +36,8 @@ generator_params:
     mask_embedding_params:
       use_heatmap: True
       use_deformed_appearance: True
-    num_group_blocks: 2
+      use_difference: True
+    num_group_blocks: 1
     camera_params: null
   main_module_params:
     block_expansion: 16
@@ -51,7 +53,7 @@ discriminator_params:
   num_blocks: 4
 
 schedule_params:
-  num_epochs: [5000, 500, 300, 100, 100, 100, 1000]
+  num_epochs: [3000, 200, 200, 200, 200, 200, 200]
   frames_per_sample: [4, 8, 16, 32, 64, 100, 100]
   lr_generator: [2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-5]
@@ -62,7 +64,7 @@ loss_weights:
   reconstruction_deformed: [10, 10, 10, 10, 1]
   generator_gan: 1
   discriminator_gan: 1
-  tv: 0
+  tv: 0.01
   tv_border: 1
   kp_movement: 0
   var_reg: 0
