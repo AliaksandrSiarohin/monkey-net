@@ -22,38 +22,42 @@ log_params:
 transfer_params:
   select_best_frame: False
 
-generator_params:
-  num_kp: 10
-  kp_variance: 0.01
-  num_channels: 3
-  kp_extractor_module_params:
-    temperature: 0.1
-    block_expansion: 16
-    max_features: 128
-    num_blocks: 5
-  deformation_module_params:
-    block_expansion: 16
+
+model_params:
+  detach_kp_generator: False
+  detach_kp_discriminator: False
+  common_params:
+    num_kp: 10
+    kp_variance: 0.01
+    num_channels: 3
+  kp_extractor_params:
+     temperature: 0.1
+     block_expansion: 16
+     max_features: 128
+     num_blocks: 5
+  generator_params:
+    deformation_module_params:
+      block_expansion: 16
+      max_features: 128
+      num_blocks: 3
+      use_mask: True
+      use_correction: True
+      mask_embedding_params:
+        use_heatmap: True
+        use_deformed_appearance: True
+      num_group_blocks: 2
+      camera_params: null
+    main_module_params:
+      block_expansion: 16
+      max_features: 128
+      num_blocks: 5
+    kp_embedding_params:
+      use_heatmap: True
+  discriminator_params:
+    block_expansion: 32
+    use_kp: True
     max_features: 128
     num_blocks: 3
-    use_mask: True
-    use_correction: True
-    mask_embedding_params:
-      use_heatmap: True
-      use_deformed_appearance: True
-    num_group_blocks: 2
-    camera_params: null
-  main_module_params:
-    block_expansion: 16
-    max_features: 128
-    num_blocks: 5
-  kp_embedding_params:
-    use_heatmap: True
-
-discriminator_params:
-  block_expansion: 32
-  num_channels: 3
-  max_features: 128
-  num_blocks: 3
 
 schedule_params:
   num_epochs: [1, 1, 1, 1, 1]
@@ -66,7 +70,7 @@ loss_weights:
   reconstruction: [10, 10, 10, 10]
   reconstruction_deformed: [10, 10, 10, 10]
   generator_gan: 0
-  discriminator_gan: 0
+  discriminator_gan: 1
   tv: 0
   tv_border: 1
   kp_movement: 0

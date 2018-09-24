@@ -52,10 +52,6 @@ class MovementEmbeddingModule(nn.Module):
         inputs = []
         if self.use_heatmap:
             heatmap = kp2gaussian(kp_video, spatial_size=spatial_size, kp_variance=self.kp_variance)
-            if self.difference_type == 'relative':
-                heatmap = torch.cat([heatmap[:, 0:1], heatmap[:, :-1]], dim=1) - heatmap
-            else:
-                heatmap = heatmap - heatmap[:, 0:1]
             heatmap = heatmap.unsqueeze(3)
             inputs.append(heatmap)
 

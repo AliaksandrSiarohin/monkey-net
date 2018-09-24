@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 
 class Logger:
-    def __init__(self, generator, log_dir, discriminator=None, optimizer_generator=None,
+    def __init__(self, generator, log_dir, discriminator=None, optimizer_generator=None, kp_extractor=None,
                  optimizer_discriminator=None, log_file_name='log.txt', log_freq_iter=100, cpk_freq_epoch=1000, fill_counter=8):
 
         self.loss_list = []
@@ -25,6 +25,7 @@ class Logger:
 
         self.generator = generator
         self.discriminator = discriminator
+        self.kp_extractor = kp_extractor
         self.optimizer_generator = optimizer_generator
         self.optimizer_discriminator = optimizer_discriminator
 
@@ -41,8 +42,7 @@ class Logger:
         self.loss_list = []
         self.log_file.flush()
 
-    def visualize_rec(self, inp):
-        out = self.generator(inp)
+    def visualize_rec(self, inp, out):
         image = Visualizer().visualize_reconstruction(inp, out)
         imageio.mimsave(os.path.join(self.visualizations_dir, "%s-rec.gif" % str(self.it).zfill(self.fill_counter)), image)
 
@@ -51,21 +51,25 @@ class Logger:
              "optimizer_generator": self.optimizer_generator.state_dict(),
              "discriminator": self.discriminator.state_dict(),
              "optimizer_discriminator": self.optimizer_discriminator.state_dict(),
-             "iter": self.it}
+             "kp_extractor": self.kp_extractor.state_dict(),
+             "epoch": self.epoch}
         torch.save(d, os.path.join(self.cpk_dir, '%s-checkpoint.pth.tar' % str(self.epoch).zfill(self.fill_counter)))
 
     @staticmethod
-    def load_cpk(checkpoint_path, generator, discriminator=None,
+    def load_cpk(checkpoint_path, generator=None, discriminator=None, kp_extractor=None,
                  optimizer_generator=None, optimizer_discriminator=None):
         checkpoint = torch.load(checkpoint_path)
-        generator.load_state_dict(checkpoint['generator'])
+        if generator is not None:
+            generator.load_state_dict(checkpoint['generator'])
+        if kp_extractor is not None:
+            kp_extractor.load_state_dict(checkpoint['kp_extractor'])
         if discriminator is not None:
             discriminator.load_state_dict(checkpoint['discriminator'])
         if optimizer_generator is not None:
             optimizer_generator.load_state_dict(checkpoint['optimizer_generator'])
         if optimizer_discriminator is not None:
             optimizer_discriminator.load_state_dict(checkpoint['optimizer_discriminator'])
-        return checkpoint['iter']
+        return checkpoint['epoch']
 
     def __enter__(self):
         return self
@@ -74,13 +78,13 @@ class Logger:
         self.save_cpk()
         self.log_file.close()
 
-    def log_iter(self, it, names, values, inp):
+    def log_iter(self, it, names, values, inp, out):
         self.it = it
         self.names = names
         self.loss_list.append(values)
         if it % self.log_freq == 0:
             self.log_scores(self.names)
-            self.visualize_rec(inp)
+            self.visualize_rec(inp, out)
 
     def log_epoch(self, epoch):
         self.epoch = epoch
