@@ -91,7 +91,12 @@ class Discriminator(nn.Module):
             heatmap = self.kp_embeding(kp_video, {k: v[:,0:1] for k, v in kp_video.items()}, out_maps[-1])
             score = (heatmap.unsqueeze(2) * out_maps[-1].unsqueeze(1)).mean(dim=4).mean(dim=4)
             score = score.view(score.shape[0], -1, score.shape[-1])
-            score = self.conv(score)
+            score_norm = torch.sqrt((score ** 2).sum(dim=1, keepdim=True))
+
+            score = torch.matmul(score.permute(0, 2, 1), score)
+            score_norm = torch.matmul(score_norm.permute(0, 2, 1), score_norm)
+
+            score = score / score_norm
         else:
             score = self.conv(out_maps[-1])
         out_maps.append(score)

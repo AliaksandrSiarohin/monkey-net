@@ -58,7 +58,7 @@ schedule_params:
   frames_per_sample: [4, 8, 16, 32, 64, 100, 100]
   lr_generator: [2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-5]
-  batch_size: [16, 16, 16, 8, 4, 2, 2]
+  batch_size: [1, 16, 16, 8, 4, 2, 2]
 
 loss_weights:
   reconstruction: [10, 10, 10]
