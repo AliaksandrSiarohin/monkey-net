@@ -39,7 +39,7 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                 optimizer_discriminator=optimizer_discriminator, log_dir=log_dir, **config['log_params']) as logger:
         for epoch in trange(start_epoch, epochs_milestones[-1]):
             for i, x in enumerate(dataloader):
-                x = {k: Variable(x[k], requires_grad=True) for k,v in x.items()}
+                x = {k: Variable(x[k].cuda(), requires_grad=True) for k,v in x.items()}
 
                 kp_video = kp_extractor(x['video_array'])
                 if config['model_params']['detach_kp_generator']:

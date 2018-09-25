@@ -27,16 +27,15 @@ class FramesDataset(Dataset):
             print("Use predefined train-test split.")
             train_images = os.listdir(os.path.join(root_dir, 'train'))
             test_images = os.listdir(os.path.join(root_dir, 'test'))
+            self.root_dir = os.path.join(self.root_dir, 'train' if is_train else 'test')
         else:
             print("Use random train-test split.")
             train_images, test_images = train_test_split(self.images, random_state=random_seed, test_size=0.2)
 
         if is_train:
-            self.images = train_images
-            self.root_dir = os.path.join(self.root_dir, 'train')
+            self.images = train_images            
         else:
             self.images = test_images
-            self.root_dir = os.path.join(self.root_dir, 'test')
 
         if is_train:
             self.transform = AllAugmentationTransform(**augmentation_param)

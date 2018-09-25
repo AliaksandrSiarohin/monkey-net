@@ -5,7 +5,7 @@ dataset_params:
     flip_param: True
     select_frames_param:
       reflect_pad_time: True
-      consequent: False
+      consequent: True
     crop_param:
       size: [64, 64]
 
@@ -13,8 +13,8 @@ log_params:
   log_freq_iter: 200
   cpk_freq_epoch: 1000
 
-transfer_param:
-  select_best_frame: True
+transfer_params:
+  select_best_frame: False
 
 model_params:
   detach_kp_generator: False
