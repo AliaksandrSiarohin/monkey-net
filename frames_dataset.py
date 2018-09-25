@@ -1,7 +1,9 @@
 import os
+import warnings
 from skimage import io, img_as_float32
 from skimage.color import gray2rgb
 from sklearn.model_selection import train_test_split
+from imageio import mimread
 
 import numpy as np
 from torch.utils.data import Dataset
@@ -20,12 +22,21 @@ class FramesDataset(Dataset):
         self.image_shape = tuple(image_shape)
         self.classes_list = classes_list
 
-        train_images, test_images = train_test_split(self.images, random_state=random_seed, test_size=0.2)
+        if os.path.exists(os.path.join(root_dir, 'train')):
+            assert os.path.exists(os.path.join(root_dir, 'test'))
+            print("Use predefined train-test split.")
+            train_images = os.listdir(os.path.join(root_dir, 'train'))
+            test_images = os.listdir(os.path.join(root_dir, 'test'))
+        else:
+            print("Use random train-test split.")
+            train_images, test_images = train_test_split(self.images, random_state=random_seed, test_size=0.2)
 
         if is_train:
             self.images = train_images
+            self.root_dir = os.path.join(self.root_dir, 'train')
         else:
             self.images = test_images
+            self.root_dir = os.path.join(self.root_dir, 'test')
 
         if is_train:
             self.transform = AllAugmentationTransform(**augmentation_param)
@@ -40,20 +51,28 @@ class FramesDataset(Dataset):
 
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir, self.images[idx])
-        image = io.imread(img_name)
+        if img_name.endswith('.png') or img_name.endswith('.jpg'):
+            image = io.imread(img_name)
 
-        if len(image.shape) == 2 or image.shape[2] == 1:
-            image = gray2rgb(image)
+            if len(image.shape) == 2 or image.shape[2] == 1:
+                image = gray2rgb(image)
 
-        if image.shape[2] == 4:
-            image = image[..., :3]
+            if image.shape[2] == 4:
+                image = image[..., :3]
 
-        image = img_as_float32(image)
+            image = img_as_float32(image)
 
-        video_array = np.moveaxis(image, 1, 0)
+            video_array = np.moveaxis(image, 1, 0)
 
-        video_array = video_array.reshape((-1, ) + self.image_shape)
-        video_array = np.moveaxis(video_array, 1, 2)
+            video_array = video_array.reshape((-1, ) + self.image_shape)
+            video_array = np.moveaxis(video_array, 1, 2)
+        elif img_name.endswith('.gif') or img_name.endswith('.mp4'):
+            video = np.array(mimread(img_name))
+            if video.shape[-1] == 4:
+                video = video[..., :3]
+            video_array = img_as_float32(video)
+        else:
+            warnings.warn("Unknown file extensions  %s" % img_name, Warning)
 
         if self.transform:
             video_array = self.transform(video_array)
