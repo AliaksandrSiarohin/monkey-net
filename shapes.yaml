@@ -21,11 +21,11 @@ log_params:
 
 transfer_params:
   select_best_frame: False
-
+  scale_difference: False
 
 model_params:
   detach_kp_generator: False
-  detach_kp_discriminator: False
+  detach_kp_discriminator: True
   common_params:
     num_kp: 10
     kp_variance: 0.01
@@ -68,7 +68,7 @@ schedule_params:
 
 loss_weights:
   reconstruction: [10, 10, 10, 10]
-  reconstruction_deformed: [10, 10, 10, 10]
+  reconstruction_deformed: [10, 0, 0, 0]
   generator_gan: 0
   discriminator_gan: 1
   tv: 0

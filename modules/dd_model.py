@@ -45,24 +45,20 @@ class DDModel(nn.Module):
         deformed_inp = F.grid_sample(inp, deformation)
         return deformed_inp
 
-    def forward(self, appearance_frame, kp_video, kp_appearance):
+    def forward(self, appearance_frame, kp_video):
         appearance_skips = self.appearance_encoder(appearance_frame)
 
         if self.detach_deformation:
-            deformations_absolute = self.deformation_module(kp_appearance={k:v.detach() for k, v in kp_appearance.items()},
-                                                                   kp_video={k:v.detach() for k, v in kp_video.items()},
-                                                                   appearance_frame=appearance_frame)
+            deformations_absolute = self.deformation_module(kp_video={k:v.detach() for k, v in kp_video.items()},
+                                                            appearance_frame=appearance_frame)
         else:
-            deformations_absolute = self.deformation_module(kp_appearance=kp_appearance,
-                                                                   kp_video=kp_video,
-                                                                   appearance_frame=appearance_frame)
+            deformations_absolute = self.deformation_module(kp_video=kp_video, appearance_frame=appearance_frame)
 
         deformed_skips = [self.deform_input(skip, deformations_absolute) for skip in appearance_skips]
 
         if self.kp_embedding_module is not None:
             d = kp_video['mean'].shape[1]
-            movement_embedding = self.kp_embedding_module(kp_appearance=kp_appearance, kp_video=kp_video,
-                                                            appearance_frame=appearance_frame)
+            movement_embedding = self.kp_embedding_module(kp_video=kp_video, appearance_frame=appearance_frame)
             kp_skips = [F.interpolate(movement_embedding, size=(d, ) + skip.shape[3:]) for skip in appearance_skips]
             skips = [torch.cat([a, b], dim=1) for a, b in zip(deformed_skips, kp_skips)]
         else:

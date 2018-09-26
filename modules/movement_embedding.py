@@ -25,26 +25,8 @@ class MovementEmbeddingModule(nn.Module):
         self.use_deformed_appearance = use_deformed_appearance
         self.use_heatmap = use_heatmap
 
-    def combine_kp(self, kp_appearance, kp_video):
-        kp_video_diff = kp_video['mean'] - kp_video['mean'][:, 0:1]
-        kp_mean = kp_video_diff + kp_appearance['mean']
-        out = {'mean': kp_mean}
-
-        if self.kp_variance == 'learned':
-            kp_var = torch.matmul(kp_video['var'], matrix_inverse(kp_video['var'][:, 0:1]))
-            kp_var = torch.matmul(kp_var, kp_appearance['var'])
-            out['var'] = kp_var
-
-        if self.difference_type == 'relative':
-            kp_video_diff = torch.cat([kp_video['mean'][:, 0:1], kp_video['mean'][:, :-1]], dim=1) - kp_video['mean']
-        else:
-            kp_video_diff = kp_video_diff
-
-        return out, -kp_video_diff
-
-    def forward(self, kp_appearance, kp_video, appearance_frame):
+    def forward(self, kp_video, appearance_frame):
         spatial_size = appearance_frame.shape[3:]
-        kp_video, kp_video_diff = self.combine_kp(kp_appearance, kp_video)
 
         bs, _, _, h, w = appearance_frame.shape
         _, d, num_kp, _ = kp_video['mean'].shape
@@ -56,6 +38,7 @@ class MovementEmbeddingModule(nn.Module):
             inputs.append(heatmap)
 
         if self.use_difference or self.use_deformed_appearance:
+            kp_video_diff = kp_video['mean'][:, 0:1] - kp_video['mean']
             kp_video_diff = kp_video_diff.view((bs, d, num_kp, 2, 1, 1)).repeat(1, 1, 1, 1, h, w)
 
         if self.use_difference:

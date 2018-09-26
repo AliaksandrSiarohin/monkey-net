@@ -15,6 +15,7 @@ log_params:
 
 transfer_params:
   select_best_frame: False
+  scale_difference: False
 
 model_params:
   detach_kp_generator: False

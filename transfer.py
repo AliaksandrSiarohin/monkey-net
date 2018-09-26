@@ -7,6 +7,28 @@ from torch.utils.data import DataLoader
 from frames_dataset import PairedDataset
 from logger import Logger, Visualizer
 import imageio
+from modules.util import matrix_inverse
+
+
+def combine_kp(kp_appearance, kp_video, scale_difference=False):
+    kp_video_diff = kp_video['mean'] - kp_video['mean'][:, 0:1]
+
+    if scale_difference:
+        _, median_appearance = compute_pairwise_distances(kp_appearance['mean'])
+        _, median_video = compute_pairwise_distances(kp_video['mean'][:, 0:1])
+        mult = median_appearance / median_video
+        mult = mult.type(kp_video_diff.type())
+        kp_video_diff *= mult
+
+    kp_mean = kp_video_diff + kp_appearance['mean']
+    out = {'mean': kp_mean}
+
+    if 'var' in kp_video:
+        kp_var = torch.matmul(kp_video['var'], matrix_inverse(kp_video['var'][:, 0:1]))
+        kp_var = torch.matmul(kp_var, kp_appearance['var'])
+        out['var'] = kp_var
+
+    return out
 
 
 def compute_pairwise_distances(kp_array):
@@ -22,12 +44,12 @@ def compute_pairwise_distances(kp_array):
     median = distances.median(dim=-1, keepdim=True)[0]
     distances /= median
 
-    return distances
+    return distances, median
 
 
 def select_best_frame(kp_video, kp_appearance):
-    video_distances = compute_pairwise_distances(kp_video)
-    appearance_distances = compute_pairwise_distances(kp_appearance)
+    video_distances, _ = compute_pairwise_distances(kp_video)
+    appearance_distances, _ = compute_pairwise_distances(kp_appearance)
 
     norm = torch.abs(video_distances - appearance_distances).sum(dim=-1)
 
@@ -50,6 +72,7 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
         os.makedirs(log_dir)
 
     generator = generator.module
+    transfer_params = config['transfer_params']
     for it, x in tqdm(enumerate(dataloader)):
         with torch.no_grad():
             x = {key: value.cuda() for key,value in x.items()}
@@ -60,17 +83,19 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
             kp_video = kp_extractor(motion_video)
             kp_appearance = kp_extractor(appearance_frame)
 
-            if config['transfer_params']['select_best_frame']:
+            if transfer_params['select_best_frame']:
                 best_frame = select_best_frame(kp_video['mean'], kp_appearance['mean'])
             else:
                 best_frame = 0
 
             reverse_sample = range(0, best_frame + 1)[::-1]
             first_video_seq = {k: v[:, reverse_sample] for k, v in kp_video.items()}
-            first_out = generator(appearance_frame, first_video_seq, kp_appearance)
+            first_out = generator(appearance_frame, combine_kp(kp_appearance, first_video_seq,
+                                                               transfer_params['scale_difference']))
 
             second_video_seq = {k: v[:, best_frame:] for k, v in kp_video.items()}
-            second_out = generator(appearance_frame, second_video_seq, kp_appearance)
+            second_out = generator(appearance_frame, combine_kp(kp_appearance, second_video_seq,
+                                                                transfer_params['scale_difference']))
 
             out = dict()
 
@@ -78,7 +103,7 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
             out['video_prediction'] = torch.cat([first_out['video_prediction'][:, :, sample],
                                                  second_out['video_prediction']], dim=2)
             out['video_deformed'] = torch.cat([first_out['video_deformed'][:, :, sample],
-                                               second_out['video_prediction']], dim=2)
+                                               second_out['video_deformed']], dim=2)
 
             out['kp_video'] = kp_video
             out['kp_appearance'] = kp_appearance

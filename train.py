@@ -44,8 +44,7 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                 kp_video = kp_extractor(x['video_array'])
                 if config['model_params']['detach_kp_generator']:
                     kp_video = {k: v.detach() for k, v in kp_video.items()}
-                kp_appearance = {k: v[:, :1] for k, v in kp_video.items()}
-                generated = generator(x['video_array'][:, :, :1], kp_video=kp_video, kp_appearance=kp_appearance)
+                generated = generator(x['video_array'][:, :, :1], kp_video=kp_video)
                 generated['kp_video'] = kp_video
 
                 video_prediction = generated['video_prediction']

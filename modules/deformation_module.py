@@ -70,8 +70,8 @@ class DeformationModule(nn.Module):
         self.use_correction = use_correction
         self.use_mask = use_mask
 
-    def forward(self, kp_appearance, kp_video, appearance_frame):
-        prediction = self.mask_embedding(kp_appearance, kp_video, appearance_frame)
+    def forward(self, kp_video, appearance_frame):
+        prediction = self.mask_embedding(kp_video, appearance_frame)
         for block in self.group_blocks:
             prediction = block(prediction)
             prediction = F.leaky_relu(prediction, 0.2)
@@ -81,7 +81,7 @@ class DeformationModule(nn.Module):
             mask = prediction[:, :(self.num_kp + 1)]
             mask = F.softmax(mask, dim=1)
             mask = mask.unsqueeze(2)
-            difference_embedding = self.difference_embedding(kp_appearance, kp_video, appearance_frame) 
+            difference_embedding = self.difference_embedding(kp_video, appearance_frame)
             if self.camera_module is None:
                 shape = (bs, 1, 2, d, h, w)
                 camera_prediction = torch.zeros(shape).type(difference_embedding.type())

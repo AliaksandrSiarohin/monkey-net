@@ -77,17 +77,16 @@ class Discriminator(nn.Module):
 
         if use_kp:
             self.kp_embeding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
-                                                           use_difference=False, use_deformed_appearance=False)
+                                                       use_difference=False, use_deformed_appearance=False)
         else:
             self.kp_embeding = None
 
         self.conv = nn.Conv3d(self.down_blocks[-1].conv.out_channels, out_channels=1, kernel_size=1)
 
-
     def forward(self, x, kp_video):
         out_maps = [x]
         if self.kp_embeding:
-            heatmap = self.kp_embeding(kp_video, {k: v[:,0:1] for k, v in kp_video.items()}, x)
+            heatmap = self.kp_embeding(kp_video, x)
             out = torch.cat([x, heatmap], dim=1)
         else:
             out = x
