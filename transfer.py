@@ -14,9 +14,9 @@ def combine_kp(kp_appearance, kp_video, scale_difference=False):
     kp_video_diff = kp_video['mean'] - kp_video['mean'][:, 0:1]
 
     if scale_difference:
-        _, median_appearance = compute_pairwise_distances(kp_appearance['mean'])
-        _, median_video = compute_pairwise_distances(kp_video['mean'][:, 0:1])
-        mult = median_appearance / median_video
+        _, app_coef = compute_pairwise_distances(kp_appearance['mean'])
+        _, video_coef = compute_pairwise_distances(kp_video['mean'][:, 0:1])
+        mult = app_coef / video_coef
         mult = mult.type(kp_video_diff.type())
         kp_video_diff *= mult
 
@@ -34,24 +34,28 @@ def combine_kp(kp_appearance, kp_video, scale_difference=False):
 def compute_pairwise_distances(kp_array):
     bs, d, num_kp, _ = kp_array.shape
 
-    distances = torch.zeros(bs, d, num_kp, num_kp)
+#    distances = torch.zeros(bs, d, num_kp, num_kp)
 
-    for i in range(num_kp):
-        for j in range(num_kp):
-            distances[:, :, i, j] = torch.abs(kp_array[:, :, i] - kp_array[:, :, j]).sum(dim=-1)
+#    for i in range(num_kp):
+#        for j in range(num_kp):
+#            distances[:, :, i, j] = torch.abs(kp_array[:, :, i] - kp_array[:, :, j]).sum(dim=-1)
 
-    distances = distances.view(bs, d, -1)
-    median = distances.median(dim=-1, keepdim=True)[0]
-    distances /= median
+    center_of_mass = kp_array.mean(dim=2, keepdim=True)
 
-    return distances, median
+#    distances = distances.view(bs, d, -1)
+#    median =  torch.sqrt(distances.var(dim=-1, keepdim=True))#[0]
+#    distances /= median
+
+    distances = kp_array - center_of_mass
+
+    return distances, distances.var()
 
 
 def select_best_frame(kp_video, kp_appearance):
     video_distances, _ = compute_pairwise_distances(kp_video)
     appearance_distances, _ = compute_pairwise_distances(kp_appearance)
 
-    norm = torch.abs(video_distances - appearance_distances).sum(dim=-1)
+    norm = torch.abs(video_distances - appearance_distances).sum(dim=-1).sum(dim=-1)
 
     best_frame = torch.argmin(norm, dim=-1)
     return best_frame.squeeze(dim=0)
@@ -107,6 +111,9 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
 
             out['kp_video'] = kp_video
             out['kp_appearance'] = kp_appearance
+            d = motion_video.shape[2]
+            out['best_frame'] = motion_video[:, :, best_frame:(best_frame + 1)].repeat(1, 1, d, 1, 1)
+            out['best_kp'] = {k: v[:, best_frame:(best_frame + 1)].repeat(1, d, 1, 1) for k, v in kp_video.items()}
 
             image = Visualizer().visualize_transfer(inp=x, out=out)
             imageio.mimsave(os.path.join(log_dir, str(it).zfill(8) + '.gif'), image)

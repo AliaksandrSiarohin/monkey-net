@@ -1,5 +1,5 @@
 dataset_params:
-  root_dir: data/nemo
+  root_dir: data/taichi
   classes_list: null
   augmentation_param:
     flip_param: True
@@ -44,7 +44,7 @@ model_params:
         num_blocks: 3
     main_module_params:
       block_expansion: 16
-      max_features: 128
+      max_features: 256
       num_blocks: 5
     kp_embedding_params:
       use_heatmap: True
@@ -55,7 +55,7 @@ model_params:
     num_blocks: 4
 
 schedule_params:
-  num_epochs: [250, 25, 25, 25, 100]
+  num_epochs: [125, 15, 15, 15, 50]
   frames_per_sample: [4, 8, 16, 32, 32]
   lr_generator: [2.0e-4, 2.0e-4, 2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-4, 2.0e-4, 2.0e-5]
