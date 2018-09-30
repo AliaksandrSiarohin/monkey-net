@@ -57,7 +57,7 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                 if config['loss_weights']['reconstruction_deformed'] is not None:
                     if np.abs(config['loss_weights']['reconstruction_deformed'][1:]).sum() == 0:
                         #Only reconstruction of deformed_video
-                        discriminator_maps_deformed = [video_deformed]
+                        discriminator_maps_deformed = [video_deformed] + [None] * (len(discriminator_maps_real) - 1)
                     else:
                         discriminator_maps_deformed = discriminator(video_deformed, kp_video_detached)
                 else:
