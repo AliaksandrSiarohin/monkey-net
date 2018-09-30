@@ -47,8 +47,8 @@ class ResBlock3D(nn.Module):
         assert merge in ['cat', 'sum']
         self.conv1 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=3, padding=1)
         self.conv2 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=3, padding=1)
-        self.norm1 = nn.InstanceNorm3d(in_features, affine=True)
-        self.norm2 = nn.InstanceNorm3d(in_features, affine=True)
+        self.norm1 = nn.BatchNorm3d(in_features, affine=True)
+        self.norm2 = nn.BatchNorm3d(in_features, affine=True)
         self.merge = merge
 
     def forward(self, x):
@@ -73,7 +73,7 @@ class UpBlock3D(nn.Module):
         super(UpBlock3D, self).__init__()
 
         self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features, kernel_size=kernel_size, padding=padding)
-        self.norm = nn.InstanceNorm3d(out_features, affine=True)
+        self.norm = nn.BatchNorm3d(out_features, affine=True)
 
     def forward(self, x):
         out = F.interpolate(x, scale_factor=(1, 2, 2))
@@ -90,7 +90,7 @@ class DownBlock3D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3, padding=1):
         super(DownBlock3D, self).__init__()
         self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features, kernel_size=kernel_size, padding=padding)
-        self.norm = nn.InstanceNorm3d(out_features, affine=True)
+        self.norm = nn.BatchNorm3d(out_features, affine=True)
         self.pool = nn.AvgPool3d(kernel_size=(1, 2, 2))
 
     def forward(self, x):
@@ -109,7 +109,7 @@ class SameBlock3D(nn.Module):
         super(SameBlock3D, self).__init__()
         self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features,
                               kernel_size=kernel_size, padding=padding, groups=groups)
-        self.norm = nn.InstanceNorm3d(out_features, affine=True)
+        self.norm = nn.BatchNorm3d(out_features, affine=True)
 
     def forward(self, x):
         out = self.conv(x)
@@ -148,7 +148,7 @@ class Decoder(nn.Module):
     Hourglass Decoder
     """
     def __init__(self, block_expansion, in_features, out_features, num_blocks=3, max_features=256, dim=2,
-                 additional_features_for_block=0):
+                 additional_features_for_block=0, use_last_conv=True):
         super(Decoder, self).__init__()
         kernel_size = (3, 3, 3) if dim == 3 else (1, 3, 3)
         padding = (1, 1, 1) if dim == 3 else (0, 1, 1)
@@ -161,15 +161,21 @@ class Decoder(nn.Module):
                                        kernel_size=kernel_size, padding=padding))
 
         self.up_blocks = nn.ModuleList(up_blocks)
-        self.conv = nn.Conv3d(in_channels=block_expansion + in_features + additional_features_for_block,
-                              out_channels=out_features, kernel_size=kernel_size, padding=padding)
+        if use_last_conv:
+            self.conv = nn.Conv3d(in_channels=block_expansion + in_features + additional_features_for_block,
+                                  out_channels=out_features, kernel_size=kernel_size, padding=padding)
+        else:
+            self.conv = None
 
     def forward(self, x):
         out = x.pop()
         for up_block in self.up_blocks:
             out = up_block(out)
             out = torch.cat([out, x.pop()], dim=1)
-        return self.conv(out)
+        if self.conv is not None:
+            return self.conv(out)
+        else:
+            return out
 
 
 class Hourglass(nn.Module):

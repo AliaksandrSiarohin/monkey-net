@@ -42,7 +42,8 @@ class DeformationModule(nn.Module):
     Deformation module, predict deformation, that will be applied to skip connections.
     """
     def __init__(self, block_expansion, num_blocks, max_features, mask_embedding_params, num_kp,
-                 num_channels, kp_variance, num_group_blocks, use_correction, use_mask, camera_params=None):
+                 num_channels, kp_variance, num_group_blocks, use_correction, use_mask, camera_init=2,
+                 camera_params=None):
         super(DeformationModule, self).__init__()
         self.mask_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
                                                       **mask_embedding_params)
@@ -59,7 +60,7 @@ class DeformationModule(nn.Module):
                                    out_features=(num_kp + 1) * use_mask + 2 * use_correction,
                                    max_features=max_features, dim=3, num_blocks=num_blocks)
         self.hourglass.decoder.conv.weight.data.zero_()
-        bias_init = ([2] + [0] * num_kp) * use_mask + [0, 0] * use_correction
+        bias_init = ([camera_init] + [0] * num_kp) * use_mask + [0, 0] * use_correction
         self.hourglass.decoder.conv.bias.data.copy_(torch.tensor(bias_init, dtype=torch.float))
 
         if camera_params is not None:
@@ -111,7 +112,7 @@ class DeformationModule(nn.Module):
 
 
 class IdentityDeformation(nn.Module):
-    def forward(self, kp_appearance, kp_video, appearance_frame):
+    def forward(self, kp_video, appearance_frame):
         bs, _, _, h, w = appearance_frame.shape
         _, d, num_kp, _ = kp_video['mean'].shape
         coordinate_grid = make_coordinate_grid((h, w), type=appearance_frame.type())

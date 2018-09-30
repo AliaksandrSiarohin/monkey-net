@@ -77,6 +77,7 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
 
     generator = generator.module
     transfer_params = config['transfer_params']
+    generator.eval()
     for it, x in tqdm(enumerate(dataloader)):
         with torch.no_grad():
             x = {key: value.cuda() for key,value in x.items()}

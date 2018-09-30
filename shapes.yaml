@@ -3,11 +3,6 @@ dataset_params:
   root_dir: data/shapes
   augmentation_param:
     flip_param: True
-    rotation_param:
-      degrees: [-10, 10]
-    resize_param:
-      ratio : [0.75, 1.25]
-      interpolation: 'nearest'
     select_frames_param:
       reflect_pad_time: True
       consequent: False
@@ -27,7 +22,7 @@ model_params:
   detach_kp_generator: False
   detach_kp_discriminator: True
   common_params:
-    num_kp: 10
+    num_kp: 1
     kp_variance: 0.01
     num_channels: 3
   kp_extractor_params:
@@ -36,6 +31,10 @@ model_params:
      max_features: 128
      num_blocks: 5
   generator_params:
+    block_expansion: 16
+    max_features: 128
+    num_blocks: 5
+    num_refinement_blocks: 2
     deformation_module_params:
       block_expansion: 16
       max_features: 128
@@ -47,16 +46,14 @@ model_params:
         use_deformed_appearance: True
       num_group_blocks: 2
       camera_params: null
-    main_module_params:
-      block_expansion: 16
-      max_features: 128
-      num_blocks: 5
+      camera_init: 0
     kp_embedding_params:
       use_heatmap: True
   discriminator_params:
     block_expansion: 32
     use_kp: True
     max_features: 128
+    non_local_index: 1
     num_blocks: 3
 
 schedule_params:
@@ -67,9 +64,9 @@ schedule_params:
   batch_size: [2, 2, 2, 2, 2]
 
 loss_weights:
-  reconstruction: [10, 10, 10, 10]
-  reconstruction_deformed: [10, 0, 0, 0]
-  generator_gan: 0
+  reconstruction: [10, 10, 10, 10, 10]
+  reconstruction_deformed: [10, 0, 0, 0, 0]
+  generator_gan: 1
   discriminator_gan: 1
   tv: 0
   tv_border: 1

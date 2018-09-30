@@ -20,6 +20,7 @@ def reconstruction(config, generator, kp_extractor, checkpoint, log_dir, dataset
         os.makedirs(log_dir)
 
     loss_list = []
+    generator.eval()
     for it, x in tqdm(enumerate(dataloader)):
         with torch.no_grad():
             kp_video = kp_extractor(x['video_array'])

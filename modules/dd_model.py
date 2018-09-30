@@ -2,9 +2,9 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from modules.appearance_encoder import AppearanceEncoder
+from modules.util import Encoder, Decoder, ResBlock3D
+
 from modules.deformation_module import DeformationModule, IdentityDeformation
-from modules.video_decoder import VideoDecoder
 from modules.movement_embedding import MovementEmbeddingModule
 
 
@@ -13,17 +13,20 @@ class DDModel(nn.Module):
     Deformable disentangling model for videos.
     """
     def __init__(self, num_channels, num_kp, kp_variance,
-                 main_module_params,
+                 block_expansion, max_features, num_blocks, num_refinement_blocks,
                  deformation_module_params=None, kp_embedding_params=None, detach_deformation=False):
         super(DDModel, self).__init__()
 
-        self.appearance_encoder = AppearanceEncoder(num_channels=num_channels, **main_module_params)
+        self.appearance_encoder = Encoder(block_expansion, in_features=num_channels, max_features=max_features,
+                                          dim=2, num_blocks=num_blocks)
 
         if kp_embedding_params is not None:
-            self.kp_embedding_module = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance,
+            self.kp_embedding_module = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, use_deformed_appearance=True,
                                                                num_channels=num_channels, **kp_embedding_params)
+            embedding_features = self.kp_embedding_module.out_channels
         else:
             self.kp_embedding_module = None
+            embedding_features = 0
 
         if deformation_module_params is not None:
             self.deformation_module = DeformationModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
@@ -31,8 +34,16 @@ class DDModel(nn.Module):
         else:
             self.deformation_module = IdentityDeformation()
 
-        self.video_decoder = VideoDecoder(num_channels=num_channels, embedding_features=self.kp_embedding_module.out_channels,
-                                          use_kp_embedding=kp_embedding_params is not None, **main_module_params)
+        self.video_decoder = Decoder(block_expansion=block_expansion, in_features=num_channels,
+                                     out_features=num_channels, max_features=max_features, num_blocks=num_blocks,
+                                     dim=3, additional_features_for_block=embedding_features,
+                                     use_last_conv=False)
+
+        self.refinement_module = torch.nn.Sequential()
+        in_features = block_expansion + num_channels + embedding_features
+        for i in range(num_refinement_blocks):
+            self.refinement_module.add_module('r' + str(i), ResBlock3D(in_features))
+        self.refinement_module.add_module('conv-last', nn.Conv3d(in_features, num_channels, kernel_size=1, padding=0))
 
         self.detach_deformation = detach_deformation
 
@@ -66,6 +77,8 @@ class DDModel(nn.Module):
 
         video_deformed = self.deform_input(appearance_frame, deformations_absolute)
         video_prediction = self.video_decoder(skips)
+        video_prediction = self.refinement_module(video_prediction)
+        video_prediction = torch.sigmoid(video_prediction)
 
         return {"video_prediction": video_prediction, "video_deformed": video_deformed,
                 'deformation': deformations_absolute}

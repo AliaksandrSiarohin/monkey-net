@@ -2,6 +2,7 @@ from torch import nn
 import torch.nn.functional as F
 import torch
 from modules.movement_embedding import MovementEmbeddingModule
+from modules.non_local import NONLocalBlock3D
 
 
 class DownBlock3D(nn.Module):
@@ -26,10 +27,7 @@ class DownBlock3D(nn.Module):
         if self.norm:
             out = self.norm(out)
         out = F.leaky_relu(out, 0.2)
-        if out.shape[2] != 1:
-            out = F.avg_pool3d(out, (2, 2, 2))
-        else:
-            out = F.avg_pool3d(out, (1, 2, 2))
+        out = F.avg_pool3d(out, (1, 2, 2))
         return out
 
 
@@ -64,7 +62,7 @@ class Discriminator(nn.Module):
     Extractor of keypoints. Return kp feature maps.
     """
     def __init__(self, num_channels=3, num_kp=10, kp_variance=0.01,
-                 block_expansion=64, num_blocks=4, max_features=512, use_kp=False):
+                 block_expansion=64, num_blocks=4, max_features=512, use_kp=False, non_local_index=None):
         super(Discriminator, self).__init__()
 
         down_blocks = []
@@ -73,6 +71,9 @@ class Discriminator(nn.Module):
                                            min(max_features, block_expansion * (2 ** (i + 1))),
                                            norm=(i != 0),
                                            kernel_size=4))
+            if i == non_local_index:
+                down_blocks.append(NONLocalBlock3D(min(max_features, block_expansion * (2 ** (i + 1))), bn_layer=False))
+
         self.down_blocks = nn.ModuleList(down_blocks)
 
         if use_kp:
