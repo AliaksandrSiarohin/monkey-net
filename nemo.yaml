@@ -5,7 +5,7 @@ dataset_params:
     flip_param: True
     select_frames_param:
       reflect_pad_time: True
-      consequent: True
+      consequent: False
     crop_param:
       size: [64, 64]
 
