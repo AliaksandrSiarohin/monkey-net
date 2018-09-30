@@ -21,7 +21,7 @@ class DDModel(nn.Module):
                                           dim=2, num_blocks=num_blocks)
 
         if kp_embedding_params is not None:
-            self.kp_embedding_module = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, use_deformed_appearance=True,
+            self.kp_embedding_module = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance,
                                                                num_channels=num_channels, **kp_embedding_params)
             embedding_features = self.kp_embedding_module.out_channels
         else:

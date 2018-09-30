@@ -29,7 +29,7 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
 
     schedule_iter = np.searchsorted(epochs_milestones, start_epoch)
     dataloader = DataLoader(dataset, batch_size=config['schedule_params']['batch_size'][schedule_iter],
-                            shuffle=True, num_workers=4)
+                            shuffle=True, num_workers=4, drop_last=True)
     set_optimizer_lr(optimizer_generator, config['schedule_params']['lr_generator'][schedule_iter])
     set_optimizer_lr(optimizer_discriminator, config['schedule_params']['lr_discriminator'][schedule_iter])
 

@@ -27,17 +27,17 @@ model_params:
   kp_extractor_params:
      temperature: 0.1
      block_expansion: 16
-     max_features: 128
+     max_features: 256
      num_blocks: 5
   generator_params:
     block_expansion: 16
-    max_features: 128
+    max_features: 256
     num_blocks: 5
-    num_refinement_blocks: 2
+    num_refinement_blocks: 4
     deformation_module_params:
       block_expansion: 16
-      max_features: 128
-      num_blocks: 3
+      max_features: 256
+      num_blocks: 5
       use_mask: True
       use_correction: True
       mask_embedding_params:
