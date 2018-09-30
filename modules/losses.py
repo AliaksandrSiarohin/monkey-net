@@ -106,7 +106,7 @@ def discriminator_gan_loss(discriminator_maps_generated, discriminator_maps_real
 
 
 def generator_loss(discriminator_maps_generated, discriminator_maps_real, discriminator_maps_deformed,
-                   deformation, kp_video, loss_weights):
+                   loss_weights):
     loss_names = []
     loss_values = []
     if loss_weights['reconstruction_deformed'] is not None:
@@ -119,17 +119,8 @@ def generator_loss(discriminator_maps_generated, discriminator_maps_real, discri
             loss_names.append("layer-%s_rec" % i)
             loss_values.append(reconstruction_loss(b, a, weight=loss_weights['reconstruction'][i]))
 
-    loss_names.append("var_reg")
-    loss_values.append(variance_reg(kp_video, loss_weights['var_reg'], loss_weights['var_target']))
-
     loss_names.append("gen_gan")
     loss_values.append(generator_gan_loss(discriminator_maps_generated, weight=loss_weights['generator_gan']))
-
-    loss_names.append('tv')
-    loss_values.append(tv_loss(deformation, discriminator_maps_real[0], loss_weights['tv'], loss_weights['tv_border']))
-
-    loss_names.append('kp_movement')
-    loss_values.append(kp_movement_loss(deformation, kp_video, loss_weights['kp_movement']))
 
     total = sum(loss_values)
 

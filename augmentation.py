@@ -240,9 +240,10 @@ class SelectRandomFrames(object):
     the range of degrees, will be (-degrees, +degrees).
     """
 
-    def __init__(self, reflect_pad_time=True, consequent=True):
+    def __init__(self, reflect_pad_time=True, consequent=True, select_appearance_frame=True):
         self.reflect_pad_time = reflect_pad_time
         self.consequent = consequent
+        self.select_appearance_frame = select_appearance_frame
         self.number_of_frames = 100000
 
     def set_number_of_frames(self, number_of_frames):
@@ -261,14 +262,30 @@ class SelectRandomFrames(object):
             clip = np.concatenate([clip, clip[::-1]], axis=0)
         frame_count = clip.shape[0]
 
+        num_frames_to_select = self.number_of_frames + self.select_appearance_frame
         if self.consequent:
-            first_frame = np.random.choice(max(1, frame_count - self.number_of_frames + 1), size=1)[0]
+            first_frame = np.random.choice(max(1, frame_count - num_frames_to_select + 1), size=1)[0]
             selected = clip[first_frame:(first_frame + self.number_of_frames)]
         else:
-            selected_index = np.sort(np.random.choice(range(frame_count), replace=False, size=self.number_of_frames))
+            selected_index = np.sort(np.random.choice(range(frame_count), replace=False, size=num_frames_to_select))
             selected = clip[selected_index]
 
+        if self.select_appearance_frame:
+            index = list(range(len(selected)))
+            appearance_frame_index = np.random.choice(len(index), size=1)[0]
+            index.remove(appearance_frame_index)
+            index.append(appearance_frame_index)
+            selected = selected[index]
+
         return selected
+
+
+class SplitVideoAppearance(object):
+    def __call__(self, video_array):
+        video_array = np.array(video_array[:-1], dtype='float32')
+        appearance_array = np.array(video_array[-1:], dtype='float32')
+        return {'video_array': video_array.transpose((3, 0, 1, 2)),
+                'appearance_array': appearance_array.transpose((3, 0, 1, 2))}
 
 
 class VideoToTensor(object):
@@ -287,7 +304,7 @@ class AllAugmentationTransform:
 
         if flip_param is not None:
             self.transforms.append(RandomHorizontalFlip())
-	
+
         if flip_param is not None:
             self.transforms.append(RandomTimeFlip())
 
@@ -300,7 +317,7 @@ class AllAugmentationTransform:
         if crop_param is not None:
             self.transforms.append(RandomCrop(**crop_param))
 
-        self.transforms.append(VideoToTensor())
+        self.transforms.append(SplitVideoAppearance())
 
     def set_number_of_frames(self, number_of_frames):
         self.select.set_number_of_frames(number_of_frames)

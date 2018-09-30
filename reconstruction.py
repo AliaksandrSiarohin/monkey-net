@@ -24,8 +24,11 @@ def reconstruction(config, generator, kp_extractor, checkpoint, log_dir, dataset
     for it, x in tqdm(enumerate(dataloader)):
         with torch.no_grad():
             kp_video = kp_extractor(x['video_array'])
-            out = generator(x['video_array'][:, :, :1], kp_video)
-            out['kp_video'] = kp_video
+            kp_appearance = {k: v[:, :1] for k, v in kp_video.items()}
+            kp_dict = {'kp_video': kp_video, 'kp_appearance': kp_appearance}
+            out = generator(x['video_array'][:, :, :1], **kp_dict)
+            out.update(kp_dict)
+            x['appearance_array'] = x['video_array'][:, :, :1]
             image = Visualizer().visualize_reconstruction(x, out)
             imageio.mimsave(os.path.join(log_dir, str(it).zfill(8) + '.gif'), image)
             loss = reconstruction_loss(out['video_prediction'].cpu(), x['video_array'].cpu(),

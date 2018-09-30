@@ -12,11 +12,13 @@ dataset_params:
 
 log_params:
   log_freq_iter: 50
-  cpk_freq_epoch: 10000
+  cpk_freq_epoch: 1
 
 transfer_params:
-  select_best_frame: False
-  scale_difference: False
+  center: False
+  scale: False
+  num_pairs: 100
+  format: '.gif'
 
 model_params:
   detach_kp_generator: False
@@ -68,8 +70,3 @@ loss_weights:
   reconstruction_deformed: [10, 0, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1
-  tv: 0
-  tv_border: 1
-  kp_movement: 0
-  var_reg: 0
-  var_target: 0.01

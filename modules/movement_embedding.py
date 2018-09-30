@@ -25,7 +25,7 @@ class MovementEmbeddingModule(nn.Module):
         self.use_deformed_appearance = use_deformed_appearance
         self.use_heatmap = use_heatmap
 
-    def forward(self, kp_video, appearance_frame):
+    def forward(self, appearance_frame, kp_video, kp_appearance):
         spatial_size = appearance_frame.shape[3:]
 
         bs, _, _, h, w = appearance_frame.shape
@@ -38,7 +38,7 @@ class MovementEmbeddingModule(nn.Module):
             inputs.append(heatmap)
 
         if self.use_difference or self.use_deformed_appearance:
-            kp_video_diff = kp_video['mean'][:, 0:1] - kp_video['mean']
+            kp_video_diff = kp_appearance['mean'] - kp_video['mean']
             kp_video_diff = kp_video_diff.view((bs, d, num_kp, 2, 1, 1)).repeat(1, 1, 1, 1, h, w)
 
         if self.use_difference:

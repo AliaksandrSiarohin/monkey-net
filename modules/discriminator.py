@@ -65,9 +65,17 @@ class Discriminator(nn.Module):
                  block_expansion=64, num_blocks=4, max_features=512, use_kp=False, non_local_index=None):
         super(Discriminator, self).__init__()
 
+        if use_kp:
+            self.kp_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
+                                                       use_difference=False, use_deformed_appearance=False)
+            embedding_channels = self.kp_embedding.out_channels
+        else:
+            self.kp_embedding = None
+            embedding_channels = 0
+
         down_blocks = []
         for i in range(num_blocks):
-            down_blocks.append(DownBlock3D(num_channels + num_kp * use_kp if i == 0 else min(max_features, block_expansion * (2 ** i)),
+            down_blocks.append(DownBlock3D(num_channels + embedding_channels if i == 0 else min(max_features, block_expansion * (2 ** i)),
                                            min(max_features, block_expansion * (2 ** (i + 1))),
                                            norm=(i != 0),
                                            kernel_size=4))
@@ -75,19 +83,12 @@ class Discriminator(nn.Module):
                 down_blocks.append(NONLocalBlock3D(min(max_features, block_expansion * (2 ** (i + 1))), bn_layer=False))
 
         self.down_blocks = nn.ModuleList(down_blocks)
-
-        if use_kp:
-            self.kp_embeding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
-                                                       use_difference=False, use_deformed_appearance=False)
-        else:
-            self.kp_embeding = None
-
         self.conv = nn.Conv3d(self.down_blocks[-1].conv.out_channels, out_channels=1, kernel_size=1)
 
-    def forward(self, x, kp_video):
+    def forward(self, x, kp_video, kp_appearance):
         out_maps = [x]
-        if self.kp_embeding:
-            heatmap = self.kp_embeding(kp_video, x)
+        if self.kp_embedding:
+            heatmap = self.kp_embedding(x, kp_video, kp_appearance)
             out = torch.cat([x, heatmap], dim=1)
         else:
             out = x
