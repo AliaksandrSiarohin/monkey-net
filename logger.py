@@ -3,7 +3,6 @@ import torch
 import imageio
 
 import os
-from modules.kp_extractor import kp2gaussian
 from skimage.draw import circle
 
 import matplotlib.pyplot as plt
@@ -52,7 +51,8 @@ class Logger:
              "discriminator": self.discriminator.state_dict(),
              "optimizer_discriminator": self.optimizer_discriminator.state_dict(),
              "kp_extractor": self.kp_extractor.state_dict(),
-             "epoch": self.epoch}
+             "epoch": self.epoch,
+             "it": self.it}
         torch.save(d, os.path.join(self.cpk_dir, '%s-checkpoint.pth.tar' % str(self.epoch).zfill(self.fill_counter)))
 
     @staticmethod
@@ -69,7 +69,7 @@ class Logger:
             optimizer_generator.load_state_dict(checkpoint['optimizer_generator'])
         if optimizer_discriminator is not None:
             optimizer_discriminator.load_state_dict(checkpoint['optimizer_discriminator'])
-        return checkpoint['epoch']
+        return checkpoint['epoch'], checkpoint['it']
 
     def __enter__(self):
         return self

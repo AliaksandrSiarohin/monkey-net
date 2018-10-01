@@ -14,17 +14,21 @@ class AffineDeformation(nn.Module):
 
         blocks = []
         for i in range(num_blocks):
-            blocks.append(nn.Conv1d((2 ** i) * 2 * num_kp, ((2 ** (i + 1)) * 2 * num_kp if i != num_blocks - 1 else 6),
+            blocks.append(nn.Conv1d((2 ** i) * 4 * num_kp, ((2 ** (i + 1)) * 4 * num_kp if i != num_blocks - 1 else 6),
                                     kernel_size=1))
 
         self.blocks = nn.ModuleList(blocks)
         self.blocks[-1].weight.data.zero_()
         self.blocks[-1].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
 
-    def forward(self, difference_embedding):
-        bs, c, d, h, w = difference_embedding.shape
+    def forward(self,  video, appearance, spatial_size):
+        h, w = spatial_size
+        bs, d, num_kp, _ = video.shape
 
-        out = difference_embedding[..., 0, 0]
+        appearance = appearance.repeat(1, d, 1, 1).view(bs * d, num_kp, 2)
+        video = video.view(bs * d, num_kp, 2)
+
+        out = torch.cat([appearance, video], dim=2).view(bs, d, -1).permute(0, 2, 1)
 
         for block in self.blocks:
             out = block(out)
@@ -87,7 +91,7 @@ class DeformationModule(nn.Module):
                 shape = (bs, 1, 2, d, h, w)
                 camera_prediction = torch.zeros(shape).type(difference_embedding.type())
             else:
-                camera_prediction = self.camera_module(difference_embedding)
+                camera_prediction = self.camera_module(kp_video['mean'], kp_appearance['mean'], (h, w))
 
             difference_embedding = torch.cat([camera_prediction, difference_embedding.view(bs, self.num_kp, 2, d, h, w)], dim=1)
             deformations_relative = (difference_embedding * mask).sum(dim=1)

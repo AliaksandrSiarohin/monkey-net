@@ -28,11 +28,12 @@ def split_kp(kp_joined, detach=False):
 
 def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, dataset):
     start_epoch = 0
+    it = 0
     optimizer_generator = torch.optim.Adam(list(generator.parameters()) + list(kp_extractor.parameters()), betas=(0.5, 0.999))
     optimizer_discriminator = torch.optim.Adam(list(discriminator.parameters()) + list(kp_extractor.parameters()), betas=(0.5, 0.999))
 
     if checkpoint is not None:
-        start_epoch = Logger.load_cpk(checkpoint, generator, discriminator, kp_extractor,
+        start_epoch, it = Logger.load_cpk(checkpoint, generator, discriminator, kp_extractor,
                                       optimizer_generator, optimizer_discriminator)
 
     epochs_milestones = np.cumsum(config['schedule_params']['num_epochs'])
@@ -48,7 +49,8 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
     with Logger(generator=generator, discriminator=discriminator, optimizer_generator=optimizer_generator, kp_extractor=kp_extractor,
                 optimizer_discriminator=optimizer_discriminator, log_dir=log_dir, **config['log_params']) as logger:
         for epoch in trange(start_epoch, epochs_milestones[-1]):
-            for i, x in enumerate(dataloader):
+            for x in dataloader:
+
                 x = {key: value.cuda() for key,value in x.items()}
 
                 #Concatenate appearance and video to properly work with batchnorm
@@ -94,8 +96,9 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                 optimizer_discriminator.step()
                 optimizer_discriminator.zero_grad()
 
-                logger.log_iter(i + epoch * dataloader.__len__(), names=gen_loss_names + disc_loss_names,
+                logger.log_iter(it, names=gen_loss_names + disc_loss_names,
                                 values=gen_loss_values + disc_loss_values, inp=x, out=generated)
+                it += 1
 
             if epoch in epochs_milestones:
                 schedule_iter = np.searchsorted(epochs_milestones, epoch, side='right')
