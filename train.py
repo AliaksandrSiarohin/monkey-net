@@ -29,12 +29,14 @@ def split_kp(kp_joined, detach=False):
 def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, dataset):
     start_epoch = 0
     it = 0
-    optimizer_generator = torch.optim.Adam(list(generator.parameters()) + list(kp_extractor.parameters()), betas=(0.5, 0.999))
-    optimizer_discriminator = torch.optim.Adam(list(discriminator.parameters()) + list(kp_extractor.parameters()), betas=(0.5, 0.999))
+
+    optimizer_generator = torch.optim.Adam(generator.parameters(), betas=(0.5, 0.999))
+    optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), betas=(0.5, 0.999))
+    optimizer_kp_extractor = torch.optim.Adam(kp_extractor.parameters(), betas=(0.5, 0.999))
 
     if checkpoint is not None:
         start_epoch, it = Logger.load_cpk(checkpoint, generator, discriminator, kp_extractor,
-                                      optimizer_generator, optimizer_discriminator)
+                                          optimizer_generator, optimizer_discriminator, optimizer_kp_extractor)
 
     epochs_milestones = np.cumsum(config['schedule_params']['num_epochs'])
 
@@ -46,8 +48,9 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
 
     dataset.set_number_of_frames_per_sample(config['schedule_params']['frames_per_sample'][schedule_iter])
 
-    with Logger(generator=generator, discriminator=discriminator, optimizer_generator=optimizer_generator, kp_extractor=kp_extractor,
-                optimizer_discriminator=optimizer_discriminator, log_dir=log_dir, **config['log_params']) as logger:
+    with Logger(generator=generator, discriminator=discriminator, kp_extractor=kp_extractor, optimizer_generator=optimizer_generator,
+                optimizer_discriminator=optimizer_discriminator, optimizer_kp_extractor=optimizer_kp_extractor,
+                log_dir=log_dir, **config['log_params']) as logger:
         for epoch in trange(start_epoch, epochs_milestones[-1]):
             for x in dataloader:
 
@@ -93,6 +96,8 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                                                                              loss_weights=config['loss_weights'])
 
                 loss.backward()
+                optimizer_kp_extractor.step()
+                optimizer_kp_extractor.zero_grad()
                 optimizer_discriminator.step()
                 optimizer_discriminator.zero_grad()
 

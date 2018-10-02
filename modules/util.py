@@ -52,6 +52,7 @@ class ResBlock3D(nn.Module):
         self.merge = merge
 
     def forward(self, x):
+        out = x
         out = self.norm1(x)
         out = F.relu(out)
         out = self.conv1(out)

@@ -15,13 +15,14 @@ class DownBlock3D(nn.Module):
         kb = ka - 1 if kernel_size % 2 == 0 else ka
 
         self.pad = nn.ReplicationPad3d((ka, kb, ka, kb, ka, kb))
-        self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features, kernel_size=kernel_size)
+        self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features, kernel_size=(kernel_size, kernel_size, kernel_size))
         if norm:
             self.norm = nn.InstanceNorm3d(out_features, affine=True)
         else:
             self.norm = None
 
     def forward(self, x):
+        out = x
         out = self.pad(x)
         out = self.conv(out)
         if self.norm:

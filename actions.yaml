@@ -15,8 +15,8 @@ log_params:
   cpk_freq_epoch: 1000
 
 transfer_params:
-  center: True
-  scale: True
+  center: False
+  scale: False
   num_pairs: 100
   format: '.gif'
 
@@ -58,11 +58,12 @@ model_params:
     num_blocks: 4
 
 schedule_params:
-  num_epochs: [5000, 500, 300, 200, 200, 200, 1000]
-  frames_per_sample: [4, 8, 16, 32, 64, 100, 100]
-  lr_generator: [2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-5]
-  lr_discriminator: [2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-4, 2.0e-5]
-  batch_size: [32, 16, 8, 4, 2, 1, 1]
+  num_epochs: [10000, 5000]
+  frames_per_sample: [4, 4]
+  lr_generator: [2.0e-4, 2.0e-5]
+  lr_discriminator: [2.0e-4, 2.0e-5]
+  lr_kp_extractor: [2.0e-4, 2.0e-5]
+  batch_size: [32, 32]
 
 loss_weights:
   reconstruction: [10, 10, 10, 10, 10, 1]

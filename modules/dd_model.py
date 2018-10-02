@@ -36,7 +36,7 @@ class DDModel(nn.Module):
 
         self.video_decoder = Decoder(block_expansion=block_expansion, in_features=num_channels,
                                      out_features=num_channels, max_features=max_features, num_blocks=num_blocks,
-                                     dim=3, additional_features_for_block=embedding_features,
+                                     dim=2, additional_features_for_block=embedding_features,
                                      use_last_conv=False)
 
         self.refinement_module = torch.nn.Sequential()
