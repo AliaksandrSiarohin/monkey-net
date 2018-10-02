@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from modules.util import Hourglass, make_coordinate_grid, matrix_inverse
 
 
-def kp2gaussian(kp, spatial_size, kp_variance='learned'):
+def kp2gaussian(kp, spatial_size, kp_variance='matrix'):
     mean = kp['mean']
 
     coordinate_grid = make_coordinate_grid(spatial_size, mean.type())
@@ -21,7 +21,7 @@ def kp2gaussian(kp, spatial_size, kp_variance='learned'):
     mean = mean.view(*shape)
 
     mean_sub = (coordinate_grid - mean)
-    if kp_variance == 'learned':
+    if kp_variance == 'matrix':
         var = kp['var']
         inv_var = matrix_inverse(var)
         shape = inv_var.shape[:number_of_leading_dimensions] + (1, 1, 2, 2)
@@ -29,6 +29,8 @@ def kp2gaussian(kp, spatial_size, kp_variance='learned'):
         under_exp = torch.matmul(torch.matmul(mean_sub.unsqueeze(-2), var), mean_sub.unsqueeze(-1))
         under_exp = under_exp.squeeze(-1).squeeze(-1)
         out = torch.exp(-0.5 * under_exp)
+    elif kp_variance == 'single':
+        out = torch.exp(-0.5 * (mean_sub ** 2).sum(-1) / kp['var'])
     else:
         out = torch.exp(-0.5 * (mean_sub ** 2).sum(-1) / kp_variance)
 
@@ -40,7 +42,7 @@ def kp2gaussian(kp, spatial_size, kp_variance='learned'):
     return out
 
 
-def gaussian2kp(heatmap, kp_variance='learned'):
+def gaussian2kp(heatmap, kp_variance='matrix'):
     shape = heatmap.shape
     heatmap = heatmap.unsqueeze(-1)
     grid = make_coordinate_grid(shape[3:], heatmap.type()).unsqueeze_(0).unsqueeze_(0).unsqueeze_(0)
@@ -49,11 +51,20 @@ def gaussian2kp(heatmap, kp_variance='learned'):
 
     kp = {'mean': mean.permute(0, 2, 1, 3)}
 
-    if kp_variance == 'learned':
+    if kp_variance == 'matrix':
         mean_sub = grid - mean.unsqueeze(-2).unsqueeze(-2)
         var = torch.matmul(mean_sub.unsqueeze(-1), mean_sub.unsqueeze(-2))
         var = var * heatmap.unsqueeze(-1)
         var = var.sum(dim=(3, 4))
+        var = var.permute(0, 2, 1, 3, 4)
+        kp['var'] = var
+    elif kp_variance == 'single':
+        mean_sub = grid - mean.unsqueeze(-2).unsqueeze(-2)
+        var = mean_sub ** 2
+        var = var * heatmap
+        var = var.sum(dim=(3, 4))
+        var = var.mean(dim=-1, keepdim=True)
+        var = var.unsqueeze(-1)
         var = var.permute(0, 2, 1, 3, 4)
         kp['var'] = var
 
@@ -91,7 +102,7 @@ if __name__ == "__main__":
     import numpy as np
 
     kp_array = np.zeros((2, 1, 6, 2), dtype='float32')
-    kp_var = np.zeros((2, 1, 6, 2, 2), dtype='float32')
+    kp_var = np.zeros((2, 1, 6, 1, 1), dtype='float32')
 
     for i in range(5, 11):
         kp_array[0, :, i - 5, 0] = 3 * i / 64
@@ -100,20 +111,23 @@ if __name__ == "__main__":
         kp_array[1, :, i - 5, 0] = 3 * i / 64
         kp_array[1, :, i - 5, 1] = 6 * i / 128
 
-    kp_var[:, :, :, 0, 0] = 0.01
-    kp_var[:, :, :, 0, 1] = 0.005
-    kp_var[:, :, :, 1, 0] = 0.005
-    kp_var[:, :, :, 1, 1] = 0.03
+    # kp_var[:, :, :, 0, 0] = 0.01
+    # kp_var[:, :, :, 0, 1] = 0.005
+    # kp_var[:, :, :, 1, 0] = 0.005
+    # kp_var[:, :, :, 1, 1] = 0.03
+
+    kp_var[:, :, :, 0] = 0.01
 
     kp_array = 2 * kp_array - 1
 
     mean_kp = torch.from_numpy(kp_array)
     var_kp = torch.from_numpy(kp_var)
 
-    out = kp2gaussian({'mean' : mean_kp, 'var': var_kp}, (128, 64))
+    out = kp2gaussian({'mean' : mean_kp, 'var': var_kp}, (128, 128), kp_variance=0.01)#'single')
 
-    kp = gaussian2kp(out)
+    kp = gaussian2kp(out, kp_variance='single')
 
+    print (kp['var'].shape)
     print (kp['mean'][0])
     print (kp['var'][0])
 
