@@ -36,13 +36,13 @@ class DDModel(nn.Module):
 
         self.video_decoder = Decoder(block_expansion=block_expansion, in_features=num_channels,
                                      out_features=num_channels, max_features=max_features, num_blocks=num_blocks,
-                                     dim=3, additional_features_for_block=embedding_features,
+                                     dim=2, additional_features_for_block=embedding_features,
                                      use_last_conv=False)
 
         self.refinement_module = torch.nn.Sequential()
         in_features = block_expansion + num_channels + embedding_features
         for i in range(num_refinement_blocks):
-            self.refinement_module.add_module('r' + str(i), ResBlock3D(in_features))
+            self.refinement_module.add_module('r' + str(i), ResBlock3D(in_features, kernel_size=(1, 3, 3), padding=(0, 1, 1)))
         self.refinement_module.add_module('conv-last', nn.Conv3d(in_features, num_channels, kernel_size=1, padding=0))
 
         self.detach_deformation = detach_deformation

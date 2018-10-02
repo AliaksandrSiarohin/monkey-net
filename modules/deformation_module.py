@@ -62,7 +62,7 @@ class DeformationModule(nn.Module):
 
         self.hourglass = Hourglass(block_expansion=block_expansion, in_features=self.mask_embedding.out_channels,
                                    out_features=(num_kp + 1) * use_mask + 2 * use_correction,
-                                   max_features=max_features, dim=3, num_blocks=num_blocks)
+                                   max_features=max_features, dim=2, num_blocks=num_blocks)
         self.hourglass.decoder.conv.weight.data.zero_()
         bias_init = ([camera_init] + [0] * num_kp) * use_mask + [0, 0] * use_correction
         self.hourglass.decoder.conv.bias.data.copy_(torch.tensor(bias_init, dtype=torch.float))

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 class Logger:
     def __init__(self, generator, log_dir, discriminator=None, optimizer_generator=None, kp_extractor=None,
-                 optimizer_discriminator=None, log_file_name='log.txt', log_freq_iter=100, cpk_freq_epoch=1000, fill_counter=8):
+                 optimizer_discriminator=None, optimizer_kp_extractor=None,log_file_name='log.txt', log_freq_iter=100, cpk_freq_epoch=1000, fill_counter=8):
 
         self.loss_list = []
         self.cpk_dir = log_dir
@@ -27,6 +27,7 @@ class Logger:
         self.kp_extractor = kp_extractor
         self.optimizer_generator = optimizer_generator
         self.optimizer_discriminator = optimizer_discriminator
+        self.optimizer_kp_extractor = optimizer_kp_extractor
 
         self.epoch = 0
         self.it = 0
@@ -51,13 +52,14 @@ class Logger:
              "discriminator": self.discriminator.state_dict(),
              "optimizer_discriminator": self.optimizer_discriminator.state_dict(),
              "kp_extractor": self.kp_extractor.state_dict(),
+             "optimizer_kp_extractor": self.optimizer_kp_extractor.state_dict(),
              "epoch": self.epoch,
              "it": self.it}
         torch.save(d, os.path.join(self.cpk_dir, '%s-checkpoint.pth.tar' % str(self.epoch).zfill(self.fill_counter)))
 
     @staticmethod
     def load_cpk(checkpoint_path, generator=None, discriminator=None, kp_extractor=None,
-                 optimizer_generator=None, optimizer_discriminator=None):
+                 optimizer_generator=None, optimizer_discriminator=None, optimizer_kp_extractor=None):
         checkpoint = torch.load(checkpoint_path)
         if generator is not None:
             generator.load_state_dict(checkpoint['generator'])
@@ -69,6 +71,9 @@ class Logger:
             optimizer_generator.load_state_dict(checkpoint['optimizer_generator'])
         if optimizer_discriminator is not None:
             optimizer_discriminator.load_state_dict(checkpoint['optimizer_discriminator'])
+        if optimizer_kp_extractor is not None:
+            optimizer_discriminator.load_state_dict(checkpoint['optimizer_kp_extractor'])
+ 
         return checkpoint['epoch'], checkpoint['it']
 
     def __enter__(self):
