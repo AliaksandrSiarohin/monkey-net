@@ -42,7 +42,7 @@ class DDModel(nn.Module):
         self.refinement_module = torch.nn.Sequential()
         in_features = block_expansion + num_channels + embedding_features
         for i in range(num_refinement_blocks):
-            self.refinement_module.add_module('r' + str(i), ResBlock3D(in_features))
+            self.refinement_module.add_module('r' + str(i), ResBlock3D(in_features, kernel_size=(1, 3, 3), padding=(0, 1, 1)))
         self.refinement_module.add_module('conv-last', nn.Conv3d(in_features, num_channels, kernel_size=1, padding=0))
 
         self.detach_deformation = detach_deformation

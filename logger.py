@@ -52,7 +52,7 @@ class Logger:
              "discriminator": self.discriminator.state_dict(),
              "optimizer_discriminator": self.optimizer_discriminator.state_dict(),
              "kp_extractor": self.kp_extractor.state_dict(),
-             "optimizer_kp_extractor": self.optimizer_kp_extractor,
+             "optimizer_kp_extractor": self.optimizer_kp_extractor.state_dict(),
              "epoch": self.epoch,
              "it": self.it}
         torch.save(d, os.path.join(self.cpk_dir, '%s-checkpoint.pth.tar' % str(self.epoch).zfill(self.fill_counter)))

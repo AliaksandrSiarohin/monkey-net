@@ -36,7 +36,7 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
 
     if checkpoint is not None:
         start_epoch, it = Logger.load_cpk(checkpoint, generator, discriminator, kp_extractor,
-                                          optimizer_generator, optimizer_discriminator, optimizer_kp_extractor)
+                                          optimizer_generator, optimizer_discriminator, optimizer_kp_extractor=None)
 
     epochs_milestones = np.cumsum(config['schedule_params']['num_epochs'])
 
@@ -45,9 +45,9 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                             shuffle=True, num_workers=4, drop_last=True)
     set_optimizer_lr(optimizer_generator, config['schedule_params']['lr_generator'][schedule_iter])
     set_optimizer_lr(optimizer_discriminator, config['schedule_params']['lr_discriminator'][schedule_iter])
+    set_optimizer_lr(optimizer_kp_extractor, config['schedule_params']['lr_kp_extractor'][schedule_iter])
 
     dataset.set_number_of_frames_per_sample(config['schedule_params']['frames_per_sample'][schedule_iter])
-
     with Logger(generator=generator, discriminator=discriminator, kp_extractor=kp_extractor, optimizer_generator=optimizer_generator,
                 optimizer_discriminator=optimizer_discriminator, optimizer_kp_extractor=optimizer_kp_extractor,
                 log_dir=log_dir, **config['log_params']) as logger:
@@ -109,12 +109,15 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                 schedule_iter = np.searchsorted(epochs_milestones, epoch, side='right')
                 lr_generator = config['schedule_params']['lr_generator'][schedule_iter]
                 lr_discriminator = config['schedule_params']['lr_discriminator'][schedule_iter]
+                lr_kp_extractor = config['schedule_params']['lr_kp_extractor'][schedule_iter]
+ 
                 bs = config['schedule_params']['batch_size'][schedule_iter]
                 frames_per_sample = config['schedule_params']['frames_per_sample'][schedule_iter]
-                print("Schedule step: lr - %s, bs - %s, frames_per_sample - %s" % ((lr_generator, lr_discriminator), bs, frames_per_sample))
+                print("Schedule step: lr - %s, bs - %s, frames_per_sample - %s" % ((lr_generator, lr_discriminator, lr_kp_extractor), bs, frames_per_sample))
                 dataloader = DataLoader(dataset, batch_size=bs, shuffle=True, num_workers=4)
                 set_optimizer_lr(optimizer_generator, lr_generator)
                 set_optimizer_lr(optimizer_discriminator, lr_discriminator)
+                set_optimizer_lr(optimizer_kp_extractor, lr_kp_extractor)
                 dataset.set_number_of_frames_per_sample(frames_per_sample)
 
             logger.log_epoch(epoch)

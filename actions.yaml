@@ -3,7 +3,8 @@ dataset_params:
   root_dir: data/actions
   classes_list: data/actions.csv
   augmentation_param:
-    flip_param: True
+    flip_param:
+      time_flip: True
     select_frames_param:
       reflect_pad_time: True
       consequent: False
@@ -15,7 +16,7 @@ log_params:
   cpk_freq_epoch: 1000
 
 transfer_params:
-  center: False
+  center: True
   scale: False
   num_pairs: 100
   format: '.gif'

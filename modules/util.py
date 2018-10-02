@@ -42,14 +42,12 @@ class ResBlock3D(nn.Module):
     """
     Res block, preserve spatial resolution.
     """
-    def __init__(self, in_features, merge='sum'):
+    def __init__(self, in_features, kernel_size, padding):
         super(ResBlock3D, self).__init__()
-        assert merge in ['cat', 'sum']
-        self.conv1 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=kernel_size, padding=padding)
+        self.conv2 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=kernel_size, padding=padding)
         self.norm1 = nn.BatchNorm3d(in_features, affine=True)
         self.norm2 = nn.BatchNorm3d(in_features, affine=True)
-        self.merge = merge
 
     def forward(self, x):
         out = x
@@ -59,10 +57,7 @@ class ResBlock3D(nn.Module):
         out = self.norm2(out)
         out = F.relu(out)
         out = self.conv2(out)
-        if self.merge == 'sum':
-            out += x
-        else:
-            out = torch.cat([out, x], dim=1)
+        out += x
         return out
 
 

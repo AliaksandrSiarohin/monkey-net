@@ -84,40 +84,18 @@ def get_resize_sizes(im_h, im_w, size):
     return oh, ow
 
 
-class RandomHorizontalFlip(object):
-    """Horizontally flip the list of given images randomly
-    with a probability 0.5
-    """
+class RandomFlip(object):
+    def __init__(self, time_flip=False, horizontal_flip=False):
+        self.time_flip = time_flip
+        self.horizontal_flip = horizontal_flip
 
     def __call__(self, clip):
-        """
-        Args:
-        img (PIL.Image or numpy.ndarray): List of images to be cropped
-        in format (h, w, c) in numpy.ndarray
-        Returns:
-        PIL.Image or numpy.ndarray: Randomly flipped clip
-        """
-        if random.random() < 0.5:
-            if isinstance(clip[0], np.ndarray):
-                return [np.fliplr(img) for img in clip]
-            elif isinstance(clip[0], PIL.Image.Image):
-                return [
-                    img.transpose(PIL.Image.FLIP_LEFT_RIGHT) for img in clip
-                ]
-            else:
-                raise TypeError('Expected numpy.ndarray or PIL.Image' +
-                                ' but got list of {0}'.format(type(clip[0])))
+        if random.random() < 0.5 and self.time_flip:
+            return clip[::-1]
+        if random.random() < 0.5 and self.horizontal_flip:
+            return [np.fliplr(img) for img in clip]
+ 
         return clip
-
-
-
-class RandomTimeFlip(object):
-    def __call__(self, clip):
-       if random.random() < 0.5:
-           if isinstance(clip[0], np.ndarray):
-               return clip[::-1]
-       return clip
-
 
 
 class RandomResize(object):
@@ -271,11 +249,9 @@ class SelectRandomFrames(object):
             selected = clip[selected_index]
 
         if self.select_appearance_frame:
-            index = list(range(len(selected)))
-            appearance_frame_index = np.random.choice(len(index), size=1)[0]
-            index.remove(appearance_frame_index)
-            index.append(appearance_frame_index)
-            selected = selected[index]
+            index = np.random.choice(frame_count, size=1)[0]
+            selected = np.concatenate([selected, clip[index:(index+1)]], axis=0)
+            
 
         return selected
 
@@ -303,10 +279,7 @@ class AllAugmentationTransform:
         self.transforms.append(self.select)
 
         if flip_param is not None:
-            self.transforms.append(RandomHorizontalFlip())
-
-        if flip_param is not None:
-            self.transforms.append(RandomTimeFlip())
+            self.transforms.append(RandomFlip(**flip_param))
 
         if rotation_param is not None:
             self.transforms.append(RandomRotation(**rotation_param))
