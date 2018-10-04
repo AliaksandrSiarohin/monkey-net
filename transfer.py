@@ -11,8 +11,12 @@ from modules.util import matrix_inverse
 
 
 def normalize_kp(kp_video, kp_appearance, center=False, scale=False):
-    center_video, sd_video = compute_center_scale(kp_video['mean'])
-    center_appearance, sd_appearance = compute_center_scale(kp_appearance['mean'])
+    distances_video, center_video, sd_video = compute_center_scale(kp_video['mean'])
+    distances_appearance, center_appearance, sd_appearance = compute_center_scale(kp_appearance['mean'])
+
+    norm = torch.abs(distances_video - distances_appearance).sum(dim=-1).sum(dim=-1)
+    best_frame = torch.argmin(norm, dim=-1)
+    _, center_video, sd_video = compute_center_scale(kp_video['mean'][:, best_frame:(best_frame + 1)])
 
     if not center:
         center_video = 0
@@ -22,10 +26,13 @@ def normalize_kp(kp_video, kp_appearance, center=False, scale=False):
         sd_video = 1
         sd_appearance = 1
 
-    kp_video = {k: v for k, v in kp_video.items()}
-    kp_video['mean'] = (kp_video['mean'] - center_video) / sd_video
-    kp_video['mean'] = kp_video['mean'] * sd_appearance + center_appearance
 
+    kp_video = {k: v for k, v in kp_video.items()}
+    kp_video['mean'] = (kp_video['mean'] - kp_video['mean'][:, 0:1])
+    kp_video['mean'] = kp_video['mean']  + kp_appearance['mean']
+    
+#    print ("Center", center_video, center_appearance)
+#    print ("Sd", sd_appearance, sd_video)
     return kp_video
 
 
@@ -37,7 +44,7 @@ def compute_center_scale(kp_array):
     var = (distances ** 2).sum(dim=2, keepdim=True).sum(dim=1, keepdim=True)
     sd = torch.sqrt(var)
 
-    return center, sd
+    return distances/ sd, center, sd
 
 
 def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
