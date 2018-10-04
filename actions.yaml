@@ -9,6 +9,7 @@ dataset_params:
       ratio: [0.75, 1.25]
     flip_param:
       time_flip: True
+      horizontal_flip: True
     select_frames_param:
       reflect_pad_time: True
       consequent: False
