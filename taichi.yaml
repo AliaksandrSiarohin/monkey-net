@@ -23,7 +23,7 @@ transfer_params:
 
 model_params:
   detach_kp_generator: False
-  detach_kp_discriminator: True
+  detach_kp_discriminator: False
   common_params:
     num_kp: 10
     kp_variance: 'matrix'
@@ -60,7 +60,7 @@ model_params:
 
 schedule_params:
   num_epochs: [250, 125]
-  frames_per_sample: [4, 4]
+  frames_per_sample: [2, 2]
   lr_generator: [2.0e-4, 2.0e-5] #2.0e-4, 2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5] #2.0e-4, 2.0e-4, 2.0e-5]
   lr_kp_extractor: [2.0e-4, 2.0e-5] #2.0e-4, 2.0e-4, 2.0e-5] 
