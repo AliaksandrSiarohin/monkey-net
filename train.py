@@ -53,7 +53,7 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                 log_dir=log_dir, **config['log_params']) as logger:
         for epoch in trange(start_epoch, epochs_milestones[-1]):
             for x in dataloader:
-                x = {key: value.cuda().requires_grad() for key,value in x.items()}
+                x = {key: Variable(value.cuda(), requires_grad=True) for key,value in x.items()}
 
                 #Concatenate appearance and video to properly work with batchnorm
                 kp_joined = kp_extractor(torch.cat([x['appearance_array'], x['video_array']], dim=2))
@@ -83,14 +83,14 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                                                                        discriminator_maps_real=discriminator_maps_real,
                                                                        loss_weights=config['loss_weights'])
                 
+                loss.backward(retain_graph=not config['model_params']['detach_kp_discriminator'])
+
                 if torch.isnan(x['video_array'].grad).byte().any():
                     warnings.warn("Nan in gradient", Warning)
                     optimizer_generator.zero_grad()
                     optimizer_discriminator.zero_grad()
                     optimizer_kp_extractor.zero_grad()
                  
-                loss.backward(retain_graph=not config['model_params']['detach_kp_discriminator'])
-
                 optimizer_generator.step()
                 optimizer_generator.zero_grad()
                 optimizer_discriminator.zero_grad()
