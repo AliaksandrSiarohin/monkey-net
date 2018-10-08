@@ -28,8 +28,8 @@ def normalize_kp(kp_video, kp_appearance, center=False, scale=False):
 
 
     kp_video = {k: v for k, v in kp_video.items()}
-    kp_video['mean'] = (kp_video['mean'] - kp_video['mean'][:, 0:1])
-    kp_video['mean'] = kp_video['mean']  + kp_appearance['mean']
+#    kp_video['mean'] = (kp_video['mean'] - kp_video['mean'][:, 0:1])
+#    kp_video['mean'] = kp_video['mean']  + kp_appearance['mean']
     
 #    print ("Center", center_video, center_appearance)
 #    print ("Sd", sd_appearance, sd_video)
