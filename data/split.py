@@ -1,8 +1,12 @@
 from sklearn.model_selection import train_test_split
 import os
 from shutil import move
+from argparse import ArgumentParser
 
-dataset = 'shapes'
+parser = ArgumentParser()
+parser.add_argument('dataset', nargs=1)
+
+dataset = parser.parse_args().dataset
 images = os.listdir(dataset)
 
 if not os.path.exists(os.path.join(dataset, 'train')):

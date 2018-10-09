@@ -30,8 +30,11 @@ def reconstruction(config, generator, kp_extractor, checkpoint, log_dir, dataset
             out = generator(x['video_array'][:, :, :1], **kp_dict)
             out.update(kp_dict)
             x['appearance_array'] = x['video_array'][:, :, :1]
+
             image = Visualizer().visualize_reconstruction(x, out)
-            imageio.mimsave(os.path.join(log_dir, str(it).zfill(8) + '.gif'), image)
+            image_name = x['name'][0] + config['transfer_params']['format']
+            imageio.mimsave(os.path.join(log_dir, image_name), image)
+
             loss = reconstruction_loss(out['video_prediction'].cpu(), x['video_array'].cpu(),
                                        config['loss_weights']['reconstruction'][0])
             loss_list.append(loss.data.cpu().numpy())
