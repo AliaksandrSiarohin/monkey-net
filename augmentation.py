@@ -241,36 +241,34 @@ class SelectRandomFrames(object):
         frame_count = clip.shape[0]
 
         num_frames_to_select = self.number_of_frames + self.select_appearance_frame
-        selected = {}
         if self.consequent:
             first_frame = np.random.choice(max(1, frame_count - num_frames_to_select + 1), size=1)[0]
-            selected['video_array'] = clip[first_frame:(first_frame + self.number_of_frames)]
+            selected = clip[first_frame:(first_frame + self.number_of_frames)]
         else:
             selected_index = np.sort(np.random.choice(range(frame_count), replace=False, size=num_frames_to_select))
-            selected['video_array'] = clip[selected_index]
+            selected = clip[selected_index]
 
         if self.select_appearance_frame:
             index = np.random.choice(frame_count, size=1)[0]
-            selected['appearance_array'] = clip[index:(index+1)]
+            selected = np.concatenate([selected, clip[index:(index+1)]], axis=0)
             
 
         return selected
 
 
-def dict_warp(func):
-    return lambda x: {k: func(v) for k, v in x.items()}
-
-
-class DictToTensor(object):
-    def __call__(self, x):
-        return {k: np.array(v, dtype='float32').transpose((3, 0, 1, 2)) for k,v in x.items()}
+class SplitVideoAppearance(object):
+    def __call__(self, video_array):
+        video_array = np.array(video_array[:-1], dtype='float32')
+        appearance_array = np.array(video_array[-1:], dtype='float32')
+        return {'video_array': video_array.transpose((3, 0, 1, 2)),
+                'appearance_array': appearance_array.transpose((3, 0, 1, 2))}
 
 
 class VideoToTensor(object):
     """Convert video array to Tensor."""
     def __call__(self, video_array):
-        video_array = np.array(video_array, dtype='float32').transpose((3, 0, 1, 2))
-        return {'video_array': video_array}
+        video_array = np.array(video_array, dtype='float32')
+        return {'video_array': video_array.transpose((3, 0, 1, 2))}
 
 
 class AllAugmentationTransform:
@@ -281,18 +279,18 @@ class AllAugmentationTransform:
         self.transforms.append(self.select)
 
         if flip_param is not None:
-            self.transforms.append(dict_warp(RandomFlip(**flip_param)))
+            self.transforms.append(RandomFlip(**flip_param))
 
         if rotation_param is not None:
-            self.transforms.append(dict_warp(RandomRotation(**rotation_param)))
+            self.transforms.append(RandomRotation(**rotation_param))
 
         if resize_param is not None:
-            self.transforms.append(dict_warp(RandomResize(**resize_param)))
+            self.transforms.append(RandomResize(**resize_param))
 
         if crop_param is not None:
-            self.transforms.append(dict_warp(RandomCrop(**crop_param)))
+            self.transforms.append(RandomCrop(**crop_param))
 
-        self.transforms.append(DictToTensor())
+        self.transforms.append(SplitVideoAppearance())
 
     def set_number_of_frames(self, number_of_frames):
         self.select.set_number_of_frames(number_of_frames)
@@ -301,3 +299,4 @@ class AllAugmentationTransform:
         for t in self.transforms:
             clip = t(clip)
         return clip
+
