@@ -196,7 +196,8 @@ def matrix_inverse(batch_of_matrix):
 
     det = a * d - b * c
     out = torch.cat([d, -b, -c, a], dim=-1)
-    out /= det
+    eps = torch.tensor(1e-10).type(out.type())
+    out /= det.max(eps)
 
     return out.view(init_shape)
 
