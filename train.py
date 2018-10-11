@@ -53,7 +53,8 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                 log_dir=log_dir, **config['log_params']) as logger:
         for epoch in trange(start_epoch, epochs_milestones[-1]):
             for x in dataloader:
-                x = {key: Variable(value.cuda(), requires_grad=True) for key,value in x.items()}
+                x = {key: value if not hasattr(value, 'cuda') else Variable(value.cuda(), requires_grad=True)
+                     for key,value in x.items()}
 
                 #Concatenate appearance and video to properly work with batchnorm
                 kp_joined = kp_extractor(torch.cat([x['appearance_array'], x['video_array']], dim=2))

@@ -73,10 +73,11 @@ class FramesDataset(Dataset):
         else:
             warnings.warn("Unknown file extensions  %s" % img_name, Warning)
 
-        if self.transform:
-            video_array = self.transform(video_array)
+        out = self.transform(video_array)
+        #add names
+        out['name'] = os.path.basename(img_name)
 
-        return video_array
+        return out
 
 
 class PairedDataset(Dataset):

@@ -69,7 +69,7 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
     kp_extractor.eval()
     for it, x in tqdm(enumerate(dataloader)):
         with torch.no_grad():
-            x = {key: value.cuda() for key,value in x.items()}
+            x = {key: value if not hasattr(value, 'cuda') else value.cuda() for key,value in x.items()}
 
             motion_video = x['first_video_array']
             appearance_frame = x['second_video_array'][:, :, :1, :, :]
@@ -83,4 +83,6 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
             out['kp_appearance'] = kp_appearance
 
             image = Visualizer().visualize_transfer(inp=x, out=out)
-            imageio.mimsave(os.path.join(log_dir, str(it).zfill(8) + transfer_params['format']), image)
+
+            img_name = "-".join([x['first_name'][0], x['second_name'][0]]) + transfer_params['format']
+            imageio.mimsave(os.path.join(log_dir, img_name), image)
