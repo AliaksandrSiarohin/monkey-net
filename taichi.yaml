@@ -2,6 +2,10 @@ dataset_params:
   root_dir: data/taichi
   classes_list: null
   augmentation_param:
+    rotation_param:
+      degrees: [-10, 10]
+    resize_param:
+      ratio: [0.75, 1.25]
     flip_param:
       time_flip: True
       horizontal_flip: True
@@ -16,14 +20,12 @@ log_params:
   cpk_freq_epoch: 1000
 
 transfer_params:
-  center: True
-  scale: True
   num_pairs: 100
   format: '.gif'
 
 model_params:
   detach_kp_generator: False
-  detach_kp_discriminator: False
+  detach_kp_discriminator: True
   common_params:
     num_kp: 10
     kp_variance: 'matrix'
@@ -60,10 +62,10 @@ model_params:
 
 schedule_params:
   num_epochs: [250, 125]
-  frames_per_sample: [2, 2]
-  lr_generator: [2.0e-4, 2.0e-5] #2.0e-4, 2.0e-4, 2.0e-5]
-  lr_discriminator: [2.0e-4, 2.0e-5] #2.0e-4, 2.0e-4, 2.0e-5]
-  lr_kp_extractor: [2.0e-4, 2.0e-5] #2.0e-4, 2.0e-4, 2.0e-5] 
+  frames_per_sample: [4, 4]
+  lr_generator: [2.0e-4, 2.0e-5]
+  lr_discriminator: [2.0e-4, 2.0e-5]
+  lr_kp_extractor: [2.0e-4, 2.0e-5]
   batch_size: [32, 32]
 
 loss_weights:

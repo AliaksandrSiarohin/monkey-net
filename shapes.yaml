@@ -20,8 +20,6 @@ log_params:
   cpk_freq_epoch: 1
 
 transfer_params:
-  center: False
-  scale: False
   num_pairs: 100
   format: '.gif'
 

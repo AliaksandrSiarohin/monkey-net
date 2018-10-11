@@ -15,8 +15,6 @@ log_params:
   cpk_freq_epoch: 1000
 
 transfer_params:
-  center: True
-  scale: True
   num_pairs: 100
   format: '.gif'
 

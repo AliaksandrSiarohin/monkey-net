@@ -187,7 +187,7 @@ class Hourglass(nn.Module):
         return self.decoder(self.encoder(x))
 
 
-def matrix_inverse(batch_of_matrix):
+def matrix_inverse(batch_of_matrix, eps=1e-6):
     init_shape = batch_of_matrix.shape
     a = batch_of_matrix[..., 0, 0].unsqueeze(-1)
     b = batch_of_matrix[..., 0, 1].unsqueeze(-1)
@@ -196,7 +196,7 @@ def matrix_inverse(batch_of_matrix):
 
     det = a * d - b * c
     out = torch.cat([d, -b, -c, a], dim=-1)
-    eps = torch.tensor(1e-10).type(out.type())
+    eps = torch.tensor(eps).type(out.type())
     out /= det.max(eps)
 
     return out.view(init_shape)
