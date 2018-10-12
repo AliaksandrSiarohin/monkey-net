@@ -5,7 +5,7 @@ import imageio
 import os
 from skimage.draw import circle
 
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 
 class Logger:
