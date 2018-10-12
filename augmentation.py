@@ -240,7 +240,7 @@ class SelectRandomFrames(object):
             clip = np.concatenate([clip, clip[::-1]], axis=0)
         frame_count = clip.shape[0]
 
-        num_frames_to_select = self.number_of_frames + self.select_appearance_frame
+        num_frames_to_select = self.number_of_frames
         if self.consequent:
             first_frame = np.random.choice(max(1, frame_count - num_frames_to_select + 1), size=1)[0]
             selected = clip[first_frame:(first_frame + self.number_of_frames)]

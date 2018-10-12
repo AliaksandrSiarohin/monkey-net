@@ -7,7 +7,6 @@ from modules.losses import reconstruction_loss
 import numpy as np
 import imageio
 
-
 def reconstruction(config, generator, kp_extractor, checkpoint, log_dir, dataset):
     log_dir = os.path.join(log_dir, 'reconstruction')
     if checkpoint is not None:
@@ -38,5 +37,6 @@ def reconstruction(config, generator, kp_extractor, checkpoint, log_dir, dataset
             loss = reconstruction_loss(out['video_prediction'].cpu(), x['video_array'].cpu(),
                                        config['loss_weights']['reconstruction'][0])
             loss_list.append(loss.data.cpu().numpy())
+            del x, kp_video, kp_appearance, out, loss
 
     print ("Reconstruction loss: %s" % np.mean(loss_list))

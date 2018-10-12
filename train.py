@@ -9,7 +9,8 @@ from modules.losses import generator_loss, discriminator_loss
 import numpy as np
 from torch.autograd import Variable
 import warnings
-
+import gc
+ 
 
 def set_optimizer_lr(optimizer, lr):
     for param_group in optimizer.param_groups:
@@ -83,14 +84,19 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                 
                 loss.backward(retain_graph=not config['model_params']['detach_kp_discriminator'])
 
-          
+                      
                 optimizer_generator.step()
                 optimizer_generator.zero_grad()
                 optimizer_discriminator.zero_grad()
                 if config['model_params']['detach_kp_discriminator']:
                     optimizer_kp_extractor.step()
                     optimizer_kp_extractor.zero_grad()
- 
+                
+                del loss
+                del discriminator_maps_real
+                del discriminator_maps_generated
+                del discriminator_maps_deformed
+
                 kp_dict = split_kp(kp_joined, config['model_params']['detach_kp_discriminator'])
                 discriminator_maps_generated = discriminator(video_prediction.detach(), **kp_dict)
                 discriminator_maps_real = discriminator(x['video_array'], **kp_dict)
@@ -108,6 +114,14 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                 logger.log_iter(it, names=gen_loss_names + disc_loss_names,
                                 values=gen_loss_values + disc_loss_values, inp=x, out=generated)
                 it += 1
+
+                del discriminator_maps_real
+                del loss
+                del x
+                del video_prediction
+                del video_deformed
+                del generated
+                del discriminator_maps_generated
 
             if epoch in epochs_milestones:
                 schedule_iter = np.searchsorted(epochs_milestones, epoch, side='right')
