@@ -91,7 +91,6 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                     optimizer_kp_extractor.step()
                     optimizer_kp_extractor.zero_grad()
  
-
                 kp_dict = split_kp(kp_joined, config['model_params']['detach_kp_discriminator'])
                 discriminator_maps_generated = discriminator(video_prediction.detach(), **kp_dict)
                 discriminator_maps_real = discriminator(x['video_array'], **kp_dict)
@@ -102,7 +101,10 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                 loss.backward()
                 optimizer_discriminator.step()
                 optimizer_discriminator.zero_grad()
-
+                if not config['model_params']['detach_kp_discriminator']:
+                    optimizer_kp_extractor.step()
+                    optimizer_kp_extractor.zero_grad()
+ 
                 logger.log_iter(it, names=gen_loss_names + disc_loss_names,
                                 values=gen_loss_values + disc_loss_values, inp=x, out=generated)
                 it += 1
