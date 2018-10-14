@@ -250,16 +250,15 @@ class SelectRandomFrames(object):
 
         if self.select_appearance_frame:
             index = np.random.choice(frame_count, size=1)[0]
-            selected = np.concatenate([selected, clip[index:(index+1)]], axis=0)
-            
-
+            selected = np.concatenate([clip[index:(index+1)], selected], axis=0)
+        
         return selected
 
 
 class SplitVideoAppearance(object):
     def __call__(self, video_array):
-        video_array = np.array(video_array[:-1], dtype='float32')
-        appearance_array = np.array(video_array[-1:], dtype='float32')
+        appearance_array = np.array(video_array[:1])
+        video_array = np.array(video_array[1:])
         return {'video_array': video_array.transpose((3, 0, 1, 2)),
                 'appearance_array': appearance_array.transpose((3, 0, 1, 2))}
 

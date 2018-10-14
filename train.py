@@ -57,9 +57,8 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                 #Concatenate appearance and video to properly work with batchnorm
                 kp_joined = kp_extractor(torch.cat([x['appearance_array'], x['video_array']], dim=2))
 
-                generated = generator(x['appearance_array'][:, :, :1],
+                generated = generator(x['appearance_array'],
                                       **split_kp(kp_joined, config['model_params']['detach_kp_generator']))
-
                 video_prediction = generated['video_prediction']
                 video_deformed = generated['video_deformed']
 
