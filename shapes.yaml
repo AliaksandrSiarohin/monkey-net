@@ -2,15 +2,10 @@ dataset_params:
   image_shape: [64, 64, 3]
   root_dir: data/shapes
   augmentation_param:
-    rotation_param:
-      degrees: [-10, 10]
-    resize_param:
-      ratio: [0.75, 1.25]
     flip_param:
       time_flip: True
       horizontal_flip: True
     select_frames_param:
-      reflect_pad_time: True
       consequent: True
     crop_param:
       size: [64, 64]
@@ -25,10 +20,10 @@ transfer_params:
 
 model_params:
   detach_kp_generator: False
-  detach_kp_discriminator: True
+  detach_kp_discriminator: False
   common_params:
     num_kp: 5
-    kp_variance: 0.01
+    kp_variance: 'matrix'
     num_channels: 3
   kp_extractor_params:
      temperature: 0.1
@@ -62,12 +57,12 @@ model_params:
     num_blocks: 3
 
 schedule_params:
-  num_epochs: [1]
-  frames_per_sample: [4]
-  lr_generator: [2.0e-4]
-  lr_discriminator: [2.0e-4]
-  lr_kp_extractor: [2.0e-4]
-  batch_size: [2]
+  num_epochs: [1, 1]
+  frames_per_sample: [4, 4]
+  lr_generator: [2.0e-4, 2.0e-5]
+  lr_discriminator: [2.0e-4, 2.0e-5]
+  lr_kp_extractor: [2.0e-4, 2.0e-5]
+  batch_size: [4, 4]
 
 loss_weights:
   reconstruction: [10, 10, 10, 10, 10]

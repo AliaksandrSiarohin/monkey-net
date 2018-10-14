@@ -3,16 +3,10 @@ dataset_params:
   root_dir: data/actions
   classes_list: data/actions.csv
   augmentation_param:
-    rotation_param:
-      degrees: [-10, 10]
-    resize_param:
-      ratio: [0.75, 1.25]
     flip_param:
       time_flip: True
-      horizontal_flip: True
     select_frames_param:
-      reflect_pad_time: True
-      consequent: False
+      consequent: True
     crop_param:
       size: [64, 64]
 
@@ -26,7 +20,7 @@ transfer_params:
 
 model_params:
   detach_kp_generator: False
-  detach_kp_discriminator: True
+  detach_kp_discriminator: False
   common_params:
     num_kp: 10
     kp_variance: 'matrix'

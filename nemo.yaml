@@ -4,9 +4,9 @@ dataset_params:
   augmentation_param:
     flip_param:
       horizontal_flip: True
+      time_flip: True
     select_frames_param:
-      reflect_pad_time: True
-      consequent: False
+      consequent: True
     crop_param:
       size: [64, 64]
 
@@ -20,7 +20,7 @@ transfer_params:
 
 model_params:
   detach_kp_generator: False
-  detach_kp_discriminator: True
+  detach_kp_discriminator: False
   common_params:
     num_kp: 10
     kp_variance: 'matrix'
