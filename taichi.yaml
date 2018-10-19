@@ -6,7 +6,8 @@ dataset_params:
       time_flip: True
       horizontal_flip: True
     select_frames_param:
-      consequent: True
+      consequent: False
+      select_appearance_frame: False
     crop_param:
       size: [64, 64]
 
@@ -27,17 +28,17 @@ model_params:
     num_channels: 3
   kp_extractor_params:
      temperature: 0.1
-     block_expansion: 16
-     max_features: 256
+     block_expansion: 32
+     max_features: 512
      num_blocks: 5
   generator_params:
-    block_expansion: 16
-    max_features: 256
+    block_expansion: 32
+    max_features: 512
     num_blocks: 5
     num_refinement_blocks: 4
     deformation_module_params:
-      block_expansion: 16
-      max_features: 256
+      block_expansion: 32
+      max_features: 512
       num_blocks: 5
       use_mask: True
       use_correction: True
@@ -57,7 +58,7 @@ model_params:
 
 schedule_params:
   num_epochs: [250, 125]
-  frames_per_sample: [4, 4]
+  frames_per_sample: [2, 2]
   lr_generator: [2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5]
   lr_kp_extractor: [2.0e-4, 2.0e-5]
@@ -65,6 +66,6 @@ schedule_params:
 
 loss_weights:
   reconstruction: [10, 10, 10, 10, 10, 1]
-  reconstruction_deformed: [10, 0, 0, 0, 0, 0]
+  reconstruction_deformed: [0, 0, 0, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1

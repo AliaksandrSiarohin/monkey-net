@@ -6,7 +6,8 @@ dataset_params:
       horizontal_flip: True
       time_flip: True
     select_frames_param:
-      consequent: True
+      consequent: False
+      select_appearance_frame: False
     crop_param:
       size: [64, 64]
 
@@ -16,14 +17,14 @@ log_params:
 
 transfer_params:
   num_pairs: 100
-  format: '.gif'
+  format: '.mp4'
 
 model_params:
   detach_kp_generator: False
   detach_kp_discriminator: False
   common_params:
     num_kp: 10
-    kp_variance: 'matrix'
+    kp_variance: 0.01 #'matrix'
     num_channels: 3
   kp_extractor_params:
      temperature: 0.1
