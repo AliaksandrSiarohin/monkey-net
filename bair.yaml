@@ -5,23 +5,20 @@ dataset_params:
     flip_param:
       time_flip: False
       horizontal_flip: True
-    select_frames_param:
-      consequent: False
-      select_appearance_frame: False
     crop_param:
       size: [64, 64]
 
 log_params:
   log_freq_iter: 200
-  cpk_freq_epoch: 1000
+  cpk_freq_epoch: 10
 
 transfer_params:
   num_pairs: 100
-  format: '.gif'
+  format: '.mp4'
 
 model_params:
   detach_kp_generator: False
-  detach_kp_discriminator: False
+  detach_kp_discriminator: True
   common_params:
     num_kp: 10
     kp_variance: 'matrix'
@@ -56,10 +53,9 @@ model_params:
     non_local_index: null
     num_blocks: 4
 
-
 schedule_params:
   num_epochs: [10, 5]
-  frames_per_sample: [2, 2]
+  frames_per_sample: [1, 1]
   lr_generator: [2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5]
   lr_kp_extractor: [2.0e-4, 2.0e-5]

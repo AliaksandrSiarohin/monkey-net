@@ -11,6 +11,11 @@ import scipy
 
 from skimage.transform import resize, rotate
 from skimage.util import pad
+import torchvision
+
+import warnings
+
+from skimage import img_as_ubyte, img_as_float
 
 def crop_clip(clip, min_h, min_w, h, w):
     if isinstance(clip[0], np.ndarray):
@@ -210,19 +215,116 @@ class RandomRotation(object):
         return rotated
 
 
-class SelectRandomFrames(object):
-    """Select frames from video, to make a batch.
+class ColorJitter(object):
+    """Randomly change the brightness, contrast and saturation and hue of the clip
     Args:
-    degrees (sequence or int): Range of degrees to select from
-    If degrees is a number instead of sequence like (min, max),
-    the range of degrees, will be (-degrees, +degrees).
+    brightness (float): How much to jitter brightness. brightness_factor
+    is chosen uniformly from [max(0, 1 - brightness), 1 + brightness].
+    contrast (float): How much to jitter contrast. contrast_factor
+    is chosen uniformly from [max(0, 1 - contrast), 1 + contrast].
+    saturation (float): How much to jitter saturation. saturation_factor
+    is chosen uniformly from [max(0, 1 - saturation), 1 + saturation].
+    hue(float): How much to jitter hue. hue_factor is chosen uniformly from
+    [-hue, hue]. Should be >=0 and <= 0.5.
     """
 
-    def __init__(self, reflect_pad_time=False, consequent=True, select_appearance_frame=True):
-        self.reflect_pad_time = reflect_pad_time
+    def __init__(self, brightness=0, contrast=0, saturation=0, hue=0):
+        self.brightness = brightness
+        self.contrast = contrast
+        self.saturation = saturation
+        self.hue = hue
+
+    def get_params(self, brightness, contrast, saturation, hue):
+        if brightness > 0:
+            brightness_factor = random.uniform(
+                max(0, 1 - brightness), 1 + brightness)
+        else:
+            brightness_factor = None
+
+        if contrast > 0:
+            contrast_factor = random.uniform(
+                max(0, 1 - contrast), 1 + contrast)
+        else:
+            contrast_factor = None
+
+        if saturation > 0:
+            saturation_factor = random.uniform(
+                max(0, 1 - saturation), 1 + saturation)
+        else:
+            saturation_factor = None
+
+        if hue > 0:
+            hue_factor = random.uniform(-hue, hue)
+        else:
+            hue_factor = None
+        return brightness_factor, contrast_factor, saturation_factor, hue_factor
+
+    def __call__(self, clip):
+        """
+        Args:
+        clip (list): list of PIL.Image
+        Returns:
+        list PIL.Image : list of transformed PIL.Image
+        """
+        if isinstance(clip[0], np.ndarray):
+            brightness, contrast, saturation, hue = self.get_params(
+                self.brightness, self.contrast, self.saturation, self.hue)
+
+            # Create img transform function sequence
+            img_transforms = []
+            if brightness is not None:
+                img_transforms.append(lambda img: torchvision.transforms.functional.adjust_brightness(img, brightness))
+            if saturation is not None:
+                img_transforms.append(lambda img: torchvision.transforms.functional.adjust_saturation(img, saturation))
+            if hue is not None:
+                img_transforms.append(lambda img: torchvision.transforms.functional.adjust_hue(img, hue))
+            if contrast is not None:
+                img_transforms.append(lambda img: torchvision.transforms.functional.adjust_contrast(img, contrast))
+            random.shuffle(img_transforms)
+            img_transforms = [img_as_ubyte, torchvision.transforms.ToPILImage()] + img_transforms + [np.array, img_as_float]
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                jittered_clip = []
+                for img in clip:
+                    jittered_img = img
+                    for func in img_transforms:
+                        jittered_img = func(jittered_img)
+                    jittered_clip.append(jittered_img.astype('float32'))
+        elif isinstance(clip[0], PIL.Image.Image):
+            brightness, contrast, saturation, hue = self.get_params(
+                self.brightness, self.contrast, self.saturation, self.hue)
+
+            # Create img transform function sequence
+            img_transforms = []
+            if brightness is not None:
+                img_transforms.append(lambda img: torchvision.transforms.functional.adjust_brightness(img, brightness))
+            if saturation is not None:
+                img_transforms.append(lambda img: torchvision.transforms.functional.adjust_saturation(img, saturation))
+            if hue is not None:
+                img_transforms.append(lambda img: torchvision.transforms.functional.adjust_hue(img, hue))
+            if contrast is not None:
+                img_transforms.append(lambda img: torchvision.transforms.functional.adjust_contrast(img, contrast))
+            random.shuffle(img_transforms)
+
+            # Apply to all images
+            jittered_clip = []
+            for img in clip:
+                for func in img_transforms:
+                    jittered_img = func(img)
+                jittered_clip.append(jittered_img)
+
+        else:
+            raise TypeError('Expected numpy.ndarray or PIL.Image' +
+                            'but got list of {0}'.format(type(clip[0])))
+        return jittered_clip
+
+
+class SelectRandomFrames(object):
+    def __init__(self, consequent=True, select_appearance_frame=True):
         self.consequent = consequent
         self.select_appearance_frame = select_appearance_frame
-        self.number_of_frames = 100000
+        self.number_of_frames = 1
 
     def set_number_of_frames(self, number_of_frames):
         self.number_of_frames = number_of_frames
@@ -235,23 +337,14 @@ class SelectRandomFrames(object):
         Returns:
         PIL.Image or numpy.ndarray: List of number_of_frames images
         """
-
-        if self.reflect_pad_time:
-            clip = np.concatenate([clip, clip[::-1]], axis=0)
         frame_count = clip.shape[0]
-
         num_frames_to_select = self.number_of_frames + self.select_appearance_frame
         if self.consequent:
             first_frame = np.random.choice(max(1, frame_count - num_frames_to_select + 1), size=1)[0]
-            selected = clip[first_frame:(first_frame + self.number_of_frames)]
+            selected = clip[first_frame:(first_frame + num_frames_to_select)]
         else:
             selected_index = np.sort(np.random.choice(range(frame_count), replace=True, size=num_frames_to_select))
             selected = clip[selected_index]
-
-#        if self.select_appearance_frame:
-#            index = np.random.choice(frame_count, size=1)[0]
-#            selected = np.concatenate([clip[index:(index+1)], selected], axis=0)
-        
         return selected
 
 
@@ -272,7 +365,7 @@ class VideoToTensor(object):
 
 class AllAugmentationTransform:
     def __init__(self, resize_param=None, rotation_param=None, flip_param=None, crop_param=None,
-                 select_frames_param={'reflect_pad_time': True, 'consequent': True}):
+                 select_frames_param={'select_appearance_frame': True, 'consequent': False}, jitter_param=None):
         self.transforms = []
         self.select = SelectRandomFrames(**select_frames_param)
         self.transforms.append(self.select)
@@ -288,6 +381,9 @@ class AllAugmentationTransform:
 
         if crop_param is not None:
             self.transforms.append(RandomCrop(**crop_param))
+
+        if jitter_param is not None:
+            self.transforms.append(ColorJitter(**jitter_param))
 
         self.transforms.append(SplitVideoAppearance())
 

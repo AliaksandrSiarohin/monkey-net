@@ -3,7 +3,6 @@ dataset_params:
   classes_list: null
   augmentation_param:
     flip_param:
-      time_flip: False
       horizontal_flip: True
     select_frames_param:
       consequent: False

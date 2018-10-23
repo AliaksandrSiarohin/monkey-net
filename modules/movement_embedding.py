@@ -34,9 +34,9 @@ class MovementEmbeddingModule(nn.Module):
         inputs = []
         if self.use_heatmap:
             heatmap = kp2gaussian(kp_video, spatial_size=spatial_size, kp_variance=self.kp_variance)
-            if heatmap_type == 'difference':
+            if self.heatmap_type == 'difference':
                 heatmap_appearance = kp2gaussian(kp_appearance, spatial_size=spatial_size, kp_variance=self.kp_variance)
-                heatmap = heatmap - heatmap_apearance
+                heatmap = heatmap - heatmap_appearance
             heatmap = heatmap.unsqueeze(3)
             inputs.append(heatmap)
 

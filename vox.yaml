@@ -4,11 +4,7 @@ dataset_params:
   image_shape: [256, 256, 3]
   augmentation_param:
     flip_param:
-      time_flip: False
       horizontal_flip: True
-    select_frames_param:
-      consequent: False
-      select_appearance_frame: False
     crop_param:
       size: [256, 256]
 
@@ -59,7 +55,7 @@ model_params:
 
 schedule_params:
   num_epochs: [10, 5]
-  frames_per_sample: [2, 2]
+  frames_per_sample: [1, 1]
   lr_generator: [2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5]
   lr_kp_extractor: [2.0e-4, 2.0e-5]

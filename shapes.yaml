@@ -2,11 +2,16 @@ dataset_params:
   image_shape: [64, 64, 3]
   root_dir: data/shapes
   augmentation_param:
+    jitter_param:
+       brightness: 0.5
+       contrast: 0.5
+       saturation: 0.5
     flip_param:
       time_flip: True
       horizontal_flip: True
     select_frames_param:
       consequent: True
+      select_appearance_frame: False
     crop_param:
       size: [64, 64]
 
@@ -46,26 +51,25 @@ model_params:
         use_deformed_appearance: True
       num_group_blocks: 2
       camera_params: null
-      camera_init: 0
     kp_embedding_params:
       use_heatmap: True
   discriminator_params:
     block_expansion: 32
     use_kp: True
     max_features: 128
-    non_local_index: 1
+    non_local_index: null
     num_blocks: 3
 
 schedule_params:
   num_epochs: [1, 1]
-  frames_per_sample: [4, 4]
+  frames_per_sample: [1, 1]
   lr_generator: [2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5]
   lr_kp_extractor: [2.0e-4, 2.0e-5]
   batch_size: [4, 4]
 
 loss_weights:
-  reconstruction: [10, 10, 10, 10, 10]
-  reconstruction_deformed: [10, 0, 0, 0, 0]
+  reconstruction: [10, 10, 10 , 10]
+  reconstruction_deformed: [10, 0,  0, 0]
   generator_gan: 1
   discriminator_gan: 1

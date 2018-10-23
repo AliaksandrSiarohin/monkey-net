@@ -4,9 +4,8 @@ dataset_params:
   classes_list: data/actions.csv
   augmentation_param:
     flip_param:
-      time_flip: True
-    select_frames_param:
-      consequent: True
+      time_flip: False
+      horizontal_flip: True
     crop_param:
       size: [64, 64]
 
@@ -16,28 +15,28 @@ log_params:
 
 transfer_params:
   num_pairs: 100
-  format: '.gif'
+  format: '.mp4'
 
 model_params:
   detach_kp_generator: False
-  detach_kp_discriminator: False
+  detach_kp_discriminator: True
   common_params:
     num_kp: 10
     kp_variance: 'matrix'
     num_channels: 3
   kp_extractor_params:
      temperature: 0.1
-     block_expansion: 16
-     max_features: 256
+     block_expansion: 32
+     max_features: 512
      num_blocks: 5
   generator_params:
-    block_expansion: 16
-    max_features: 256
+    block_expansion: 32
+    max_features: 512
     num_blocks: 5
     num_refinement_blocks: 4
     deformation_module_params:
-      block_expansion: 16
-      max_features: 256
+      block_expansion: 32
+      max_features: 512
       num_blocks: 5
       use_mask: True
       use_correction: True
@@ -52,19 +51,19 @@ model_params:
     block_expansion: 32
     use_kp: True
     max_features: 256
-    non_local_index: 1
+    non_local_index: null
     num_blocks: 4
 
 schedule_params:
   num_epochs: [10000, 5000]
-  frames_per_sample: [4, 4]
+  frames_per_sample: [1, 1]
   lr_generator: [2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5]
   lr_kp_extractor: [2.0e-4, 2.0e-5]
-  batch_size: [32, 32]
+  batch_size: [4, 4]
 
 loss_weights:
-  reconstruction: [10, 10, 10, 10, 10, 1]
-  reconstruction_deformed: [10, 0, 0, 0, 0, 0]
+  reconstruction: [10, 10, 10, 10, 1]
+  reconstruction_deformed: [10, 0, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1

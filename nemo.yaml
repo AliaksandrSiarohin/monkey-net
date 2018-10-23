@@ -5,9 +5,6 @@ dataset_params:
     flip_param:
       time_flip: False
       horizontal_flip: True
-    select_frames_param:
-      consequent: False
-      select_appearance_frame: False
     crop_param:
       size: [64, 64]
 
@@ -58,7 +55,7 @@ model_params:
 
 schedule_params:
   num_epochs: [500, 250]
-  frames_per_sample: [2, 2]
+  frames_per_sample: [1, 1]
   lr_generator: [2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5]
   lr_kp_extractor: [2.0e-4, 2.0e-5]
