@@ -10,17 +10,17 @@ class MovementEmbeddingModule(nn.Module):
     Produce embedding for movement
     """
     def __init__(self, num_kp, kp_variance, num_channels, use_deformed_appearance=False, use_difference=False,
-                 use_heatmap=True, difference_type='absolute'):
+                 use_heatmap=True, heatmap_type='gaussian'):
         super(MovementEmbeddingModule, self).__init__()
 
-        assert difference_type in ['absolute', 'relative']
+        assert heatmap_type in ['gaussian', 'difference']
 
         assert ((int(use_heatmap) + int(use_deformed_appearance) + int(use_difference)) >= 1)
 
         self.out_channels = (1 * use_heatmap + 2 * use_difference + num_channels * use_deformed_appearance) * num_kp
 
         self.kp_variance = kp_variance
-        self.difference_type = difference_type
+        self.heatmap_type = heatmap_type
         self.use_difference = use_difference
         self.use_deformed_appearance = use_deformed_appearance
         self.use_heatmap = use_heatmap
@@ -34,6 +34,9 @@ class MovementEmbeddingModule(nn.Module):
         inputs = []
         if self.use_heatmap:
             heatmap = kp2gaussian(kp_video, spatial_size=spatial_size, kp_variance=self.kp_variance)
+            if heatmap_type == 'difference':
+                heatmap_appearance = kp2gaussian(kp_appearance, spatial_size=spatial_size, kp_variance=self.kp_variance)
+                heatmap = heatmap - heatmap_apearance
             heatmap = heatmap.unsqueeze(3)
             inputs.append(heatmap)
 

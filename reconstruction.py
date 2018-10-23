@@ -22,14 +22,25 @@ def reconstruction(config, generator, kp_extractor, checkpoint, log_dir, dataset
     generator.eval()
     kp_extractor.eval()
     for it, x in tqdm(enumerate(dataloader)):
-        with torch.no_grad():
-            kp_video = kp_extractor(x['video_array'])
-            kp_appearance = {k: v[:, :1] for k, v in kp_video.items()}
-            kp_dict = {'kp_video': kp_video, 'kp_appearance': kp_appearance}
-            out = generator(x['video_array'][:, :, :1], **kp_dict)
-            out.update(kp_dict)
-            x['appearance_array'] = x['video_array'][:, :, :1]
+        with torch.no_grad():               
+            kp_appearance = kp_extractor(x['video_array'][:, :, :1])                    
+            kp_video = []
+            out = {'video_prediction': [], 'video_deformed': []}
+            for i in range(x['video_array'].shape[2]):
+                     kp_target = kp_extractor(x['video_array'][:, :, i:(i+1)])
+                     kp_video.append(kp_target)  
+                     kp_dict_part = {'kp_video': kp_target, 'kp_appearance': kp_appearance}           
+                     out_part = generator(x['video_array'][:, :, :1], **kp_dict_part)
+                     out['video_prediction'].append(out_part['video_prediction'])
+                     out['video_deformed'].append(out_part['video_deformed'])
 
+            out['video_prediction'] = torch.cat(out['video_prediction'], dim=2)
+            out['video_deformed'] =  torch.cat(out['video_deformed'], dim=2)
+            out['kp_video'] = {k: torch.cat(list(map(lambda x: x[k], kp_video)), dim=1) for k in kp_appearance.keys()}
+            out['kp_appearance'] = kp_appearance
+
+            x['appearance_array'] = x['video_array'][:, :, :1]
+            
             image = Visualizer().visualize_reconstruction(x, out)
             image_name = x['name'][0] + config['transfer_params']['format']
             imageio.mimsave(os.path.join(log_dir, image_name), image)

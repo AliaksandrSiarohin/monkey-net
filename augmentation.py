@@ -245,7 +245,7 @@ class SelectRandomFrames(object):
             first_frame = np.random.choice(max(1, frame_count - num_frames_to_select + 1), size=1)[0]
             selected = clip[first_frame:(first_frame + self.number_of_frames)]
         else:
-            selected_index = np.sort(np.random.choice(range(frame_count), replace=False, size=num_frames_to_select))
+            selected_index = np.sort(np.random.choice(range(frame_count), replace=True, size=num_frames_to_select))
             selected = clip[selected_index]
 
 #        if self.select_appearance_frame:
@@ -255,12 +255,12 @@ class SelectRandomFrames(object):
         return selected
 
 
-#class SplitVideoAppearance(object):
-#    def __call__(self, video_array):
-#        appearance_array = np.array(video_array[:1])
-#        video_array = np.array(video_array[1:])
-#        return {'video_array': video_array.transpose((3, 0, 1, 2)),
-#                'appearance_array': appearance_array.transpose((3, 0, 1, 2))}
+class SplitVideoAppearance(object):
+    def __call__(self, video_array):
+        appearance_array = np.array(video_array[:1])
+        video_array = np.array(video_array[1:])
+        return {'video_array': video_array.transpose((3, 0, 1, 2)),
+                'appearance_array': appearance_array.transpose((3, 0, 1, 2))}
 
 
 class VideoToTensor(object):
@@ -289,7 +289,7 @@ class AllAugmentationTransform:
         if crop_param is not None:
             self.transforms.append(RandomCrop(**crop_param))
 
-        self.transforms.append(VideoToTensor())
+        self.transforms.append(SplitVideoAppearance())
 
     def set_number_of_frames(self, number_of_frames):
         self.select.set_number_of_frames(number_of_frames)

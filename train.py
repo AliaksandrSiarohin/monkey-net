@@ -19,10 +19,10 @@ def set_optimizer_lr(optimizer, lr):
 
 def split_kp(kp_joined, detach=False):
     if detach:
-        kp_video = {k: v.detach() for k, v in kp_joined.items()}
+        kp_video = {k: v[:, 1:].detach() for k, v in kp_joined.items()}
         kp_appearance = {k: v[:, :1].detach() for k, v in kp_joined.items()}
     else:
-        kp_video = {k: v for k, v in kp_joined.items()}
+        kp_video = {k: v[:, 1:] for k, v in kp_joined.items()}
         kp_appearance = {k: v[:, :1] for k, v in kp_joined.items()}
     return {'kp_video': kp_video, 'kp_appearance': kp_appearance}
 
@@ -55,11 +55,9 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
         for epoch in trange(start_epoch, epochs_milestones[-1]):
             for x in dataloader:
                 #Concatenate appearance and video to properly work with batchnorm
-                kp_joined = kp_extractor(x['video_array'])
-                x['appearance_array'] = x['video_array'][:, :, :1]
-
-                generated = generator(x['appearance_array'],
-                                      **split_kp(kp_joined, config['model_params']['detach_kp_generator']))
+                kp_joined = kp_extractor(torch.cat([x['appearance_array'], x['video_array']], dim=2))
+                #x['appearance_array'] = x['video_array'][:, :, :1]
+                generated = generator(x['appearance_array'], **split_kp(kp_joined, config['model_params']['detach_kp_generator']))
                 video_prediction = generated['video_prediction']
                 video_deformed = generated['video_deformed']
 

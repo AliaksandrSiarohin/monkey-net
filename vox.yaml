@@ -1,6 +1,7 @@
 dataset_params:
-  root_dir: data/nemo
+  root_dir: data/vox
   classes_list: null
+  image_shape: [256, 256, 3]
   augmentation_param:
     flip_param:
       time_flip: False
@@ -9,37 +10,37 @@ dataset_params:
       consequent: False
       select_appearance_frame: False
     crop_param:
-      size: [64, 64]
+      size: [256, 256]
 
 log_params:
   log_freq_iter: 200
-  cpk_freq_epoch: 200
+  cpk_freq_epoch: 1
 
 transfer_params:
   num_pairs: 100
-  format: '.mp4'
+  format: '.gif'
 
 model_params:
   detach_kp_generator: False
-  detach_kp_discriminator: True
+  detach_kp_discriminator: False
   common_params:
     num_kp: 10
-    kp_variance: 0.01
+    kp_variance: 'matrix'
     num_channels: 3
   kp_extractor_params:
      temperature: 0.1
      block_expansion: 32
-     max_features: 512
-     num_blocks: 5
+     max_features: 1024
+     num_blocks: 7
   generator_params:
     block_expansion: 32
-    max_features: 512
-    num_blocks: 5
+    max_features: 1024
+    num_blocks: 7
     num_refinement_blocks: 4
     deformation_module_params:
       block_expansion: 32
-      max_features: 512
-      num_blocks: 5
+      max_features: 1024
+      num_blocks: 7
       use_mask: True
       use_correction: True
       mask_embedding_params:
@@ -57,12 +58,12 @@ model_params:
     num_blocks: 4
 
 schedule_params:
-  num_epochs: [500, 250]
+  num_epochs: [10, 5]
   frames_per_sample: [2, 2]
   lr_generator: [2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5]
   lr_kp_extractor: [2.0e-4, 2.0e-5]
-  batch_size: [32, 32]
+  batch_size: [4, 4]
 
 loss_weights:
   reconstruction: [10, 10, 10, 10, 1]

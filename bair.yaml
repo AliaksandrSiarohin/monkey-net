@@ -1,5 +1,5 @@
 dataset_params:
-  root_dir: data/nemo
+  root_dir: data/bair
   classes_list: null
   augmentation_param:
     flip_param:
@@ -13,18 +13,18 @@ dataset_params:
 
 log_params:
   log_freq_iter: 200
-  cpk_freq_epoch: 200
+  cpk_freq_epoch: 1000
 
 transfer_params:
   num_pairs: 100
-  format: '.mp4'
+  format: '.gif'
 
 model_params:
   detach_kp_generator: False
-  detach_kp_discriminator: True
+  detach_kp_discriminator: False
   common_params:
     num_kp: 10
-    kp_variance: 0.01
+    kp_variance: 'matrix'
     num_channels: 3
   kp_extractor_params:
      temperature: 0.1
@@ -56,8 +56,9 @@ model_params:
     non_local_index: null
     num_blocks: 4
 
+
 schedule_params:
-  num_epochs: [500, 250]
+  num_epochs: [10, 5]
   frames_per_sample: [2, 2]
   lr_generator: [2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5]
