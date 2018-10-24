@@ -4,7 +4,7 @@ dataset_params:
   image_shape: [256, 256, 3]
   augmentation_param:
     flip_param:
-      horizontal_flip: True
+      horizontal_flip: False
     crop_param:
       size: [256, 256]
 
@@ -18,7 +18,7 @@ transfer_params:
 
 model_params:
   detach_kp_generator: False
-  detach_kp_discriminator: False
+  detach_kp_discriminator: True
   common_params:
     num_kp: 10
     kp_variance: 'matrix'

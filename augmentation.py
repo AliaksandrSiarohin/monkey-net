@@ -350,8 +350,8 @@ class SelectRandomFrames(object):
 
 class SplitVideoAppearance(object):
     def __call__(self, video_array):
-        appearance_array = np.array(video_array[:1])
-        video_array = np.array(video_array[1:])
+        appearance_array = np.array(video_array[:1], dtype='float32')
+        video_array = np.array(video_array[1:], dtype='float32')
         return {'video_array': video_array.transpose((3, 0, 1, 2)),
                 'appearance_array': appearance_array.transpose((3, 0, 1, 2))}
 
