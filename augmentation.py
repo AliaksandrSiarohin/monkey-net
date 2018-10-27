@@ -321,7 +321,7 @@ class ColorJitter(object):
 
 
 class SelectRandomFrames(object):
-    def __init__(self, consequent=True, select_appearance_frame=True):
+    def __init__(self, consequent=False, select_appearance_frame=True):
         self.consequent = consequent
         self.select_appearance_frame = select_appearance_frame
         self.number_of_frames = 1

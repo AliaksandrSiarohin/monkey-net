@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 parser = ArgumentParser()
 parser.add_argument('dataset', nargs=1)
 
-dataset = parser.parse_args().dataset
+dataset = parser.parse_args().dataset[0]
 images = os.listdir(dataset)
 
 if not os.path.exists(os.path.join(dataset, 'train')):
@@ -15,7 +15,7 @@ if not os.path.exists(os.path.join(dataset, 'train')):
 if not os.path.exists(os.path.join(dataset, 'test')):
     os.makedirs(os.path.join(dataset, 'test'))
 
-train, test = train_test_split(images, random_state=0, test_size=0.2)
+train, test = train_test_split(images, random_state=0, test_size=0.1)
 
 
 def mv_all_images(images, in_folder, out_folder):

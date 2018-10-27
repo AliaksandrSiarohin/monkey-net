@@ -1,22 +1,20 @@
 dataset_params:
-  root_dir: data/vox
+  root_dir: data/walking-gif
   classes_list: null
-  image_shape: [256, 256, 3]
+  image_shape: [128, 128, 3]
   augmentation_param:
-    select_frames_param:
-      consequent: True
     flip_param:
-      horizontal_flip: False
+      horizontal_flip: True
     crop_param:
-      size: [256, 256]
+      size: [128, 128]
 
 log_params:
   log_freq_iter: 200
-  cpk_freq_epoch: 1
+  cpk_freq_epoch: 1000
 
 transfer_params:
   num_pairs: 100
-  format: '.gif'
+  format: '.mp4'
 
 model_params:
   detach_kp_generator: False
@@ -28,17 +26,17 @@ model_params:
   kp_extractor_params:
      temperature: 0.1
      block_expansion: 32
-     max_features: 1024
-     num_blocks: 7
+     max_features: 512
+     num_blocks: 6
   generator_params:
     block_expansion: 32
-    max_features: 1024
-    num_blocks: 7
-    num_refinement_blocks: 4
+    max_features: 512
+    num_blocks: 6
+    num_refinement_blocks: 0
     deformation_module_params:
       block_expansion: 32
-      max_features: 1024
-      num_blocks: 7
+      max_features: 512
+      num_blocks: 6
       use_mask: True
       use_correction: True
       mask_embedding_params:
@@ -49,7 +47,7 @@ model_params:
       camera_params: null
     kp_embedding_params:
       use_heatmap: True
-      heatmap_type: 'difference'
+      heatmap_type: 'difference' 
   discriminator_params:
     block_expansion: 32
     use_kp: True
@@ -58,12 +56,12 @@ model_params:
     num_blocks: 4
 
 schedule_params:
-  num_epochs: [10, 5]
+  num_epochs: [5000, 2500]
   frames_per_sample: [1, 1]
   lr_generator: [2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5]
   lr_kp_extractor: [2.0e-4, 2.0e-5]
-  batch_size: [4, 4]
+  batch_size: [32, 32]
 
 loss_weights:
   reconstruction: [10, 10, 10, 10, 1]

@@ -42,10 +42,12 @@ model_params:
       mask_embedding_params:
         use_heatmap: True
         use_deformed_appearance: True
+        heatmap_type: 'difference'
       num_group_blocks: 2
       camera_params: null
     kp_embedding_params:
       use_heatmap: True
+      heatmap_type: 'difference'
   discriminator_params:
     block_expansion: 32
     use_kp: True
@@ -54,7 +56,7 @@ model_params:
     num_blocks: 4
 
 schedule_params:
-  num_epochs: [10, 5]
+  num_epochs: [20, 10]
   frames_per_sample: [1, 1]
   lr_generator: [2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5]

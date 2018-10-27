@@ -116,7 +116,7 @@ class DeformationModule(nn.Module):
 
 
 class IdentityDeformation(nn.Module):
-    def forward(self, kp_video, appearance_frame):
+    def forward(self, appearance_frame, kp_video, kp_appearance):
         bs, _, _, h, w = appearance_frame.shape
         _, d, num_kp, _ = kp_video['mean'].shape
         coordinate_grid = make_coordinate_grid((h, w), type=appearance_frame.type())
