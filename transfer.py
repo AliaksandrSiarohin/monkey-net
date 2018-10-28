@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from frames_dataset import PairedDataset
 from logger import Logger, Visualizer
 import imageio
-from modules.util import matrix_inverse
+from modules.util import matrix_inverse, matrix_det
 
 
 def normalize_kp(kp_video, kp_appearance):
@@ -21,7 +21,6 @@ def normalize_kp(kp_video, kp_appearance):
         kp_video['var'] = kp_var
     
     return kp_video
-
 
 def compute_center_scale(kp_array):
     bs, d, num_kp, _ = kp_array.shape
@@ -40,7 +39,7 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
 
     dataset = PairedDataset(initial_dataset=dataset, number_of_pairs=transfer_params['num_pairs'])
     dataloader = DataLoader(dataset, batch_size=1,
-                            shuffle=True, num_workers=1)
+                            shuffle=False, num_workers=1)
 
     if checkpoint is not None:
         Logger.load_cpk(checkpoint, generator=generator, kp_extractor=kp_extractor)
@@ -57,17 +56,17 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
     for it, x in tqdm(enumerate(dataloader)):
         with torch.no_grad():
             x = {key: value if not hasattr(value, 'cuda') else value.cuda() for key,value in x.items()}
-
             motion_video = x['first_video_array']
             appearance_frame = x['second_video_array'][:, :, :1, :, :]
 
             kp_video = kp_extractor(motion_video)
             kp_appearance = kp_extractor(appearance_frame)
             kp_video_norm = normalize_kp(kp_video, kp_appearance)
+            #kp_video_norm = kp_video
             out = generator(appearance_frame=appearance_frame, kp_video=kp_video_norm, kp_appearance=kp_appearance)
             out['kp_video'] = kp_video
             out['kp_appearance'] = kp_appearance
-
+            
             image = Visualizer().visualize_transfer(inp=x, out=out)
 
             img_name = "-".join([x['first_name'][0], x['second_name'][0]]) + transfer_params['format']
