@@ -5,72 +5,32 @@ from modules.util import Hourglass, make_coordinate_grid, Encoder, SameBlock3D
 from modules.movement_embedding import MovementEmbeddingModule
 
 
-class AffineDeformation(nn.Module):
-    """
-    Deformation module receive keypoint cordinates and try to predict values for affine deformation. It has MPL architecture.
-    """
-    def __init__(self, num_kp, num_blocks=3):
-        super(AffineDeformation, self).__init__()
-
-        blocks = []
-        for i in range(num_blocks):
-            blocks.append(nn.Conv1d((2 ** i) * 4 * num_kp, ((2 ** (i + 1)) * 4 * num_kp if i != num_blocks - 1 else 6),
-                                    kernel_size=1))
-
-        self.blocks = nn.ModuleList(blocks)
-        self.blocks[-1].weight.data.zero_()
-        self.blocks[-1].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
-
-    def forward(self,  video, appearance, spatial_size):
-        h, w = spatial_size
-        bs, d, num_kp, _ = video.shape
-
-        appearance = appearance.repeat(1, d, 1, 1).view(bs * d, num_kp, 2)
-        video = video.view(bs * d, num_kp, 2)
-
-        out = torch.cat([appearance, video], dim=2).view(bs, d, -1).permute(0, 2, 1)
-
-        for block in self.blocks:
-            out = block(out)
-            out = F.leaky_relu(out, 0.2)
-        out = out.view(-1, 2, 3)
-
-        deformations_absolute = F.affine_grid(out, torch.Size((out.shape[0], 3, h, w)))
-        deformations_absolute = deformations_absolute.view((bs, 1, d, h, w, -1))
-
-        return deformations_absolute.permute(0, 1, 5, 2, 3, 4)
-
-
 class DeformationModule(nn.Module):
     """
     Deformation module, predict deformation, that will be applied to skip connections.
     """
     def __init__(self, block_expansion, num_blocks, max_features, mask_embedding_params, num_kp,
-                 num_channels, kp_variance, num_group_blocks, use_correction, use_mask, camera_init=2,
-                 camera_params=None):
+                 num_channels, kp_variance, num_group_blocks, use_correction, use_mask, bg_init=2):
         super(DeformationModule, self).__init__()
         self.mask_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
-                                                      **mask_embedding_params)
+                                                      add_bg_feature_map=True, **mask_embedding_params)
         self.difference_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
-                                                            use_difference=True, use_heatmap=False, use_deformed_appearance=False)
+                                                            add_bg_feature_map=True, use_difference=True,
+                                                            use_heatmap=False, use_deformed_appearance=False)
 
         group_blocks = []
         for i in range(num_group_blocks):
             group_blocks.append(SameBlock3D(self.mask_embedding.out_channels, self.mask_embedding.out_channels,
-                                            groups=num_kp, kernel_size=(1, 1, 1), padding=(0, 0, 0)))
+                                            groups=num_kp + 1, kernel_size=(1, 1, 1), padding=(0, 0, 0)))
         self.group_blocks = nn.ModuleList(group_blocks)
 
         self.hourglass = Hourglass(block_expansion=block_expansion, in_features=self.mask_embedding.out_channels,
                                    out_features=(num_kp + 1) * use_mask + 2 * use_correction,
                                    max_features=max_features, dim=2, num_blocks=num_blocks)
         self.hourglass.decoder.conv.weight.data.zero_()
-        bias_init = ([camera_init] + [0] * num_kp) * use_mask + [0, 0] * use_correction
+        bias_init = ([bg_init] + [0] * num_kp) * use_mask + [0, 0] * use_correction
         self.hourglass.decoder.conv.bias.data.copy_(torch.tensor(bias_init, dtype=torch.float))
 
-        if camera_params is not None:
-            self.camera_module = AffineDeformation(num_kp=num_kp, **camera_params)
-        else:
-            self.camera_module = None
         self.num_kp = num_kp
         self.use_correction = use_correction
         self.use_mask = use_mask
@@ -87,13 +47,7 @@ class DeformationModule(nn.Module):
             mask = F.softmax(mask, dim=1)
             mask = mask.unsqueeze(2)
             difference_embedding = self.difference_embedding(appearance_frame, kp_video, kp_appearance)
-            if self.camera_module is None:
-                shape = (bs, 1, 2, d, h, w)
-                camera_prediction = torch.zeros(shape).type(difference_embedding.type())
-            else:
-                camera_prediction = self.camera_module(kp_video['mean'], kp_appearance['mean'], (h, w))
-
-            difference_embedding = torch.cat([camera_prediction, difference_embedding.view(bs, self.num_kp, 2, d, h, w)], dim=1)
+            difference_embedding = difference_embedding.view(bs, self.num_kp + 1, 2, d, h, w)
             deformations_relative = (difference_embedding * mask).sum(dim=1)
         else:
             deformations_relative = 0

@@ -1,23 +1,18 @@
 dataset_params:
   image_shape: [64, 64, 3]
-  root_dir: data/shapes
+  root_dir: data/shapes_resizing
   augmentation_param:
-    jitter_param:
-       brightness: 0.5
-       contrast: 0.5
-       saturation: 0.5
     flip_param:
       time_flip: True
       horizontal_flip: True
     select_frames_param:
-      consequent: True
-      select_appearance_frame: False
+      consequent: False
     crop_param:
       size: [64, 64]
 
 log_params:
-  log_freq_iter: 50
-  cpk_freq_epoch: 1
+  log_freq_iter: 200
+  cpk_freq_epoch: 10
 
 transfer_params:
   num_pairs: 100
@@ -25,9 +20,9 @@ transfer_params:
 
 model_params:
   detach_kp_generator: False
-  detach_kp_discriminator: False
+  detach_kp_discriminator: True
   common_params:
-    num_kp: 5
+    num_kp: 4
     kp_variance: 'matrix'
     num_channels: 3
   kp_extractor_params:
@@ -45,14 +40,15 @@ model_params:
       max_features: 128
       num_blocks: 3
       use_mask: True
-      use_correction: False
+      use_correction: True
       mask_embedding_params:
         use_heatmap: True
         use_deformed_appearance: True
+        heatmap_type: 'difference'
       num_group_blocks: 2
-      camera_params: null
     kp_embedding_params:
       use_heatmap: True
+      heatmap_type: 'difference'
   discriminator_params:
     block_expansion: 32
     use_kp: True
@@ -61,15 +57,15 @@ model_params:
     num_blocks: 3
 
 schedule_params:
-  num_epochs: [1, 1]
+  num_epochs: [4, 4]
   frames_per_sample: [1, 1]
   lr_generator: [2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5]
   lr_kp_extractor: [2.0e-4, 2.0e-5]
-  batch_size: [4, 4]
+  batch_size: [16, 16]
 
 loss_weights:
   reconstruction: [10, 10, 10 , 10]
-  reconstruction_deformed: [10, 0,  0, 0]
+  reconstruction_deformed: [10, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1

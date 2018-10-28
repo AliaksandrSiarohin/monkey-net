@@ -10,20 +10,21 @@ class MovementEmbeddingModule(nn.Module):
     Produce embedding for movement
     """
     def __init__(self, num_kp, kp_variance, num_channels, use_deformed_appearance=False, use_difference=False,
-                 use_heatmap=True, heatmap_type='gaussian'):
+                 use_heatmap=True, add_bg_feature_map=False, heatmap_type='gaussian'):
         super(MovementEmbeddingModule, self).__init__()
 
         assert heatmap_type in ['gaussian', 'difference']
 
         assert ((int(use_heatmap) + int(use_deformed_appearance) + int(use_difference)) >= 1)
 
-        self.out_channels = (1 * use_heatmap + 2 * use_difference + num_channels * use_deformed_appearance) * num_kp
+        self.out_channels = (1 * use_heatmap + 2 * use_difference + num_channels * use_deformed_appearance) * (num_kp + add_bg_feature_map)
 
         self.kp_variance = kp_variance
         self.heatmap_type = heatmap_type
         self.use_difference = use_difference
         self.use_deformed_appearance = use_deformed_appearance
         self.use_heatmap = use_heatmap
+        self.add_bg_feature_map = add_bg_feature_map
 
     def forward(self, appearance_frame, kp_video, kp_appearance):
         spatial_size = appearance_frame.shape[3:]
@@ -37,11 +38,18 @@ class MovementEmbeddingModule(nn.Module):
             if self.heatmap_type == 'difference':
                 heatmap_appearance = kp2gaussian(kp_appearance, spatial_size=spatial_size, kp_variance=self.kp_variance)
                 heatmap = heatmap - heatmap_appearance
+            if self.add_bg_feature_map:
+                zeros = torch.zeros(bs, d, 1, h, w).type(heatmap.type())
+                heatmap = torch.cat([zeros, heatmap], dim=2)
             heatmap = heatmap.unsqueeze(3)
             inputs.append(heatmap)
 
+        num_kp += self.add_bg_feature_map
         if self.use_difference or self.use_deformed_appearance:
             kp_video_diff = kp_appearance['mean'] - kp_video['mean']
+            if self.add_bg_feature_map:
+                zeros = torch.zeros(bs, d, 1, 2).type(kp_video_diff.type())
+                kp_video_diff = torch.cat([zeros, kp_video_diff], dim=2)
             kp_video_diff = kp_video_diff.view((bs, d, num_kp, 2, 1, 1)).repeat(1, 1, 1, 1, h, w)
 
         if self.use_difference:

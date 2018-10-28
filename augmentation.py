@@ -7,7 +7,6 @@ import numbers
 import random
 import numpy as np
 import PIL
-import scipy
 
 from skimage.transform import resize, rotate
 from skimage.util import pad

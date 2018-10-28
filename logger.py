@@ -167,9 +167,7 @@ class Visualizer:
         appearance_video_batch = np.transpose(appearance_video_batch, [0, 2, 3, 4, 1])
         appearance_deformed_batch = np.transpose(appearance_deformed_batch, [0, 2, 3, 4, 1])
 
-        diff_batch = gt_video_batch * 0.5 + appearance_deformed_batch * 0.5
-
         image = self.create_image_grid((appearance_video_batch, kp_appearance), (gt_video_batch, kp_video), out_video_batch,
-                                       appearance_deformed_batch, diff_batch)
+                                       appearance_deformed_batch, gt_video_batch)
         image = (255 * image).astype(np.uint8)
         return image
