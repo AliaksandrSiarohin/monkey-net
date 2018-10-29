@@ -2,10 +2,10 @@ dataset_params:
   root_dir: data/nemo
   classes_list: null
   augmentation_param:
-#    rotation_param:
-#      degrees: [-45, 45]
-#    resize_param:
-#      ratio: [0.75, 1.25]
+    rotation_param:
+      degrees: [-45, 45]
+    resize_param:
+      ratio: [0.75, 1.25]
     flip_param:
       time_flip: False
       horizontal_flip: True
@@ -36,7 +36,6 @@ model_params:
     block_expansion: 32
     max_features: 512
     num_blocks: 5
-    num_refinement_blocks: 4
     deformation_module_params:
       block_expansion: 32
       max_features: 512
@@ -46,10 +45,11 @@ model_params:
       mask_embedding_params:
         use_heatmap: True
         use_deformed_appearance: True
+        heatmap_type: 'difference'
       num_group_blocks: 2
-      camera_params: null
     kp_embedding_params:
       use_heatmap: True
+      heatmap_type: 'difference'
   discriminator_params:
     block_expansion: 32
     use_kp: True

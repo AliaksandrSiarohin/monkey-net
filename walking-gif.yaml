@@ -14,7 +14,9 @@ log_params:
 
 transfer_params:
   num_pairs: 100
-  format: '.mp4'
+  format: '.gif'
+  move_location: True
+  movement_mult: True
 
 model_params:
   detach_kp_generator: False
