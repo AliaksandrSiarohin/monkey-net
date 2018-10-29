@@ -63,7 +63,7 @@ schedule_params:
   lr_generator: [2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5]
   lr_kp_extractor: [2.0e-4, 2.0e-5]
-  batch_size: [4, 4]
+  batch_size: [16, 16]
 
 loss_weights:
   reconstruction: [10, 10, 10, 10, 1]
