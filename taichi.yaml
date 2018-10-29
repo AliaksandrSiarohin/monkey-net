@@ -31,7 +31,7 @@ model_params:
     block_expansion: 32
     max_features: 512
     num_blocks: 5
-    num_refinement_blocks: 4
+    num_refinement_blocks: 0
     deformation_module_params:
       block_expansion: 32
       max_features: 512
@@ -43,7 +43,6 @@ model_params:
         use_deformed_appearance: True
         heatmap_type: 'difference'
       num_group_blocks: 2
-      camera_params: null
     kp_embedding_params:
       use_heatmap: True
       heatmap_type: 'difference' 
