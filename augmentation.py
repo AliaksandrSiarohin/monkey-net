@@ -336,7 +336,7 @@ class SelectRandomFrames(object):
         Returns:
         PIL.Image or numpy.ndarray: List of number_of_frames images
         """
-        frame_count = clip.shape[0]
+        frame_count = len(clip)
         num_frames_to_select = self.number_of_frames + self.select_appearance_frame
         if self.consequent:
             first_frame = np.random.choice(max(1, frame_count - num_frames_to_select + 1), size=1)[0]

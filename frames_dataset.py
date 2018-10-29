@@ -16,7 +16,7 @@ from augmentation import AllAugmentationTransform, VideoToTensor
 class FramesDataset(Dataset):
     """Dataset of videos, represented as image of consequent frames"""
     def __init__(self, root_dir, augmentation_param, image_shape=(64, 64, 3), is_train=True,
-                 random_seed=0, classes_list=None):
+                 random_seed=0, classes_list=None, transform=None):
         self.root_dir = root_dir
         self.images = os.listdir(root_dir)
         self.image_shape = tuple(image_shape)
@@ -37,10 +37,13 @@ class FramesDataset(Dataset):
         else:
             self.images = test_images
 
-        if is_train:
-            self.transform = AllAugmentationTransform(**augmentation_param)
+        if transform is None:
+            if is_train:
+                self.transform = AllAugmentationTransform(**augmentation_param)
+            else:
+                self.transform = VideoToTensor()
         else:
-            self.transform = VideoToTensor()
+            self.transform = transform
 
     def __len__(self):
         return len(self.images)

@@ -17,12 +17,12 @@ from modules.kp_extractor import KPExtractor
 from train import train
 from reconstruction import reconstruction
 from transfer import transfer
-
+from prediction import prediction
 
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--config", required=True, help="path to config")
-    parser.add_argument("--mode", default="train", choices=["train", "reconstruction", "transfer"])
+    parser.add_argument("--mode", default="train", choices=["train", "reconstruction", "transfer", "prediction"])
     parser.add_argument("--log_dir", default='log', help="path to log into")
     parser.add_argument("--checkpoint", default=None, help="path to checkpoint to restore")
     parser.add_argument("--device_ids", default="0", type=lambda x: list(map(int, x.split(','))),
@@ -65,12 +65,15 @@ if __name__ == "__main__":
     dataset = FramesDataset(is_train=(opt.mode == 'train'), **config['dataset_params'])
 
     if opt.mode == 'train':
-        print("Start model training...")
+        print("Training...")
         train(config, generator, discriminator, kp_extractor, opt.checkpoint, log_dir, dataset)
     elif opt.mode == 'reconstruction':
-        print("Start model testing...")
+        print("Reconstruction...")
         reconstruction(config, generator, kp_extractor, opt.checkpoint, log_dir, dataset)
     elif opt.mode == 'transfer':
-        print("Transfering motion...")
+        print("Transfer...")
         transfer(config, generator, kp_extractor, opt.checkpoint, log_dir, dataset)
+    elif opt.mode == "prediction":
+        print("Prediction...")
+        prediction(config, generator, kp_extractor, opt.checkpoint, log_dir)
 
