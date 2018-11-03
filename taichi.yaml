@@ -1,19 +1,25 @@
 dataset_params:
   root_dir: data/taichi
-  classes_list: null
+  classes_list: data/taichi.csv
   augmentation_param:
     flip_param:
       horizontal_flip: True
+      time_flip: True
     crop_param:
       size: [64, 64]
+    select_frames_param:
+      min_difference: 0
 
 log_params:
   log_freq_iter: 200
   cpk_freq_epoch: 1000
 
+
 transfer_params:
   num_pairs: 100
-  format: '.mp4'
+  format: '.gif'
+  movement_mult: False
+  move_location: True
 
 model_params:
   detach_kp_generator: False
@@ -31,7 +37,7 @@ model_params:
     block_expansion: 32
     max_features: 512
     num_blocks: 5
-    num_refinement_blocks: 0
+    num_refinement_blocks: 4
     deformation_module_params:
       block_expansion: 32
       max_features: 512
@@ -63,6 +69,21 @@ schedule_params:
 
 loss_weights:
   reconstruction: [10, 10, 10, 10, 1]
-  reconstruction_deformed: [10, 0, 0, 0, 0]
+  reconstruction_deformed: [0, 0, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1
+
+prediction_params:
+  module_params:
+     num_kp: 20
+     kp_variance: 'matrix'
+     num_features: 1024
+     num_layers: 1
+     dropout: 0
+  num_epochs: 1000
+  lr: 0.001
+  bs: 256
+  num_frames: 32
+  init_frames: 1
+  train_size: -1
+  format: '.mp4'

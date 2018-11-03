@@ -15,6 +15,8 @@ log_params:
 transfer_params:
   num_pairs: 100
   format: '.mp4'
+  movement_mult: False
+  move_location: True 
 
 model_params:
   detach_kp_generator: False
@@ -44,7 +46,6 @@ model_params:
         use_deformed_appearance: True
         heatmap_type: 'difference'
       num_group_blocks: 2
-      camera_params: null
     kp_embedding_params:
       use_heatmap: True
       heatmap_type: 'difference'
@@ -56,7 +57,7 @@ model_params:
     num_blocks: 4
 
 schedule_params:
-  num_epochs: [20, 10]
+  num_epochs: [10, 5]
   frames_per_sample: [1, 1]
   lr_generator: [2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5]
@@ -68,3 +69,18 @@ loss_weights:
   reconstruction_deformed: [10, 0, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1
+
+prediction_params:
+  module_params:
+     num_kp: 10
+     kp_variance: 'matrix'
+     num_features: 1024
+     num_layers: 1
+     dropout: 0
+  num_epochs: 1000
+  lr: 0.001
+  bs: 256
+  num_frames: 32
+  init_frames: 1
+  train_size: 5000
+  format: '.mp4'
