@@ -46,7 +46,6 @@ model_params:
         use_deformed_appearance: True
         heatmap_type: 'difference'
       num_group_blocks: 2
-      camera_params: null
     kp_embedding_params:
       use_heatmap: True
       heatmap_type: 'difference'
