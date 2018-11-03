@@ -8,7 +8,7 @@ from imageio import mimread
 import numpy as np
 from torch.utils.data import Dataset
 import pandas as pd
-from itertools import permutations
+from itertools import combinations
 
 from augmentation import AllAugmentationTransform, VideoToTensor
 
@@ -104,8 +104,8 @@ class PairedDataset(Dataset):
             labels = classes['cls']
 
             name_pairs = []
-            for cls in np.unique(labels):
-                name_pairs += list(permutations(names[labels == cls], 2))
+            for cls in np.sort(np.unique(labels)):
+                name_pairs += list(combinations(names[labels == cls], 2))
 
             xy = []
             for first, second in name_pairs:
@@ -115,7 +115,7 @@ class PairedDataset(Dataset):
 
         number_of_pairs = min(xy.shape[0], number_of_pairs)
         np.random.seed(seed)
-        self.pairs = xy.take(np.random.choice(xy.shape[0], number_of_pairs, replace=False), axis=0)
+        self.pairs = xy[:number_of_pairs] #xy.take(np.random.choice(xy.shape[0], number_of_pairs, replace=False), axis=0)
 
     def __len__(self):
         return len(self.pairs)

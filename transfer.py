@@ -16,13 +16,13 @@ def normalize_kp(kp_video, kp_appearance, movement_mult=True, move_location=True
         video_area = ConvexHull(kp_video['mean'][0, 0].data.cpu().numpy()).volume  
         movement_mult = appearance_area / video_area
     else:
-        movement_mult = 0
+        movement_mult = 1
 
     kp_video = {k: v for k, v in kp_video.items()}
    
     if move_location:
         kp_video_diff = (kp_video['mean'] - kp_video['mean'][:, 0:1]) 
-        kp_video['mean'] *= movement_mult   
+        kp_video_diff *= movement_mult
         kp_video['mean'] = kp_video_diff  + kp_appearance['mean']
 
     if ('var' in kp_video) and move_location:

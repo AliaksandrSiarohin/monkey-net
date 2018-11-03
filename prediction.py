@@ -48,7 +48,12 @@ def prediction(config, generator, kp_extractor, checkpoint, log_dir):
     generator.eval()
 
     keypoints_array = []
+
+    prediction_params = config['prediction_params']
+
     for it, x in tqdm(enumerate(dataloader)):
+        if it ==  prediction_params['train_size']:
+            break
         with torch.no_grad():
             keypoints = []
             for i in range(x['video_array'].shape[2]):
@@ -56,8 +61,6 @@ def prediction(config, generator, kp_extractor, checkpoint, log_dir):
                 kp = {k: v.data.cpu().numpy() for k,v in kp.items()}
                 keypoints.append(kp)
             keypoints_array.append(keypoints)
-
-    prediction_params = config['prediction_params']
 
     predictor = PredictionModule(**prediction_params['module_params']).cuda()
 
@@ -104,6 +107,7 @@ def prediction(config, generator, kp_extractor, checkpoint, log_dir):
     print("Make predictions...")
     for it, x in tqdm(enumerate(dataloader)):
         with torch.no_grad():
+            x['video_array'] = x['video_array'][:, :, :num_frames]
             kp_init = kp_extractor(x['video_array'])
             for k in kp_init:
                 kp_init[k][:, init_frames:] = 0
@@ -125,12 +129,11 @@ def prediction(config, generator, kp_extractor, checkpoint, log_dir):
             out['video_deformed'] = torch.cat(out['video_deformed'], dim=2)
             out['kp_video'] = kp_video
             out['kp_appearance'] = kp_appearance
-            x['video_array'] = out['video_prediction']
 
             x['appearance_array'] = x['video_array'][:, :, :1]
 
             image = Visualizer().visualize_reconstruction(x, out)
-            image_name = x['name'][0] + config['transfer_params']['format']
+            image_name = x['name'][0] + prediction_params['format']
             imageio.mimsave(os.path.join(log_dir, image_name), image)
 
             del x, kp_video, kp_appearance, out
