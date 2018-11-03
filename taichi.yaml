@@ -7,8 +7,6 @@ dataset_params:
       time_flip: True
     crop_param:
       size: [64, 64]
-    select_frames_param:
-      min_difference: 0
 
 log_params:
   log_freq_iter: 200
@@ -69,7 +67,7 @@ schedule_params:
 
 loss_weights:
   reconstruction: [10, 10, 10, 10, 1]
-  reconstruction_deformed: [0, 0, 0, 0, 0]
+  reconstruction_deformed: [10, 0, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1
 
