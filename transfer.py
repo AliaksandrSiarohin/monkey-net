@@ -9,6 +9,24 @@ from logger import Logger, Visualizer
 import imageio
 from modules.util import matrix_inverse, matrix_det
 from scipy.spatial import ConvexHull
+import numpy as np
+
+#def make_symetric_matrix(torch_matrix):
+#    a = torch_matrix.cpu().numpy()
+#    print (a[0, 0, 0])
+#    print (np.linalg.det(a[0, 0, 0]))
+#    c = (a + np.transpose(a, (0, 1, 2, 4, 3))) / 2
+#    d, u = np.linalg.eig(c)
+#    d[d < 0] = 0
+#    d_matrix = np.zeros_like(a)
+#    d_matrix[..., 0, 0] = d[..., 0]
+#    d_matrix[..., 1, 1] = d[..., 1]
+#    res = np.matmul(np.matmul(u, d_matrix), np.transpose(u, (0, 1, 2, 4, 3)))
+#    print (res[0, 0, 0])
+#    res = torch.from_numpy(res).type(torch_matrix.type())
+    
+#    return res
+    
 
 def normalize_kp(kp_video, kp_appearance, movement_mult=True, move_location=True):
     if movement_mult:
@@ -24,11 +42,17 @@ def normalize_kp(kp_video, kp_appearance, movement_mult=True, move_location=True
         kp_video_diff = (kp_video['mean'] - kp_video['mean'][:, 0:1]) 
         kp_video_diff *= movement_mult
         kp_video['mean'] = kp_video_diff  + kp_appearance['mean']
+        one = torch.ones(1).type(kp_video_diff.type()) 
+        kp_video['mean'] = torch.max(kp_video['mean'], -one)
+        kp_video['mean'] = torch.min(kp_video['mean'], one)
 
-    if ('var' in kp_video) and move_location:
-        kp_var = torch.matmul(kp_video['var'], matrix_inverse(kp_video['var'][:, 0:1]))
-        kp_var = torch.matmul(kp_var, kp_appearance['var'])
-        kp_video['var'] = kp_var
+
+#    if ('var' in kp_video) and move_location:
+#        kp_var = torch.matmul(kp_video['var'], matrix_inverse(kp_video['var'][:, 0:1], eps=0))
+#        kp_var = torch.matmul(kp_var, kp_appearance['var'])
+#
+#        kp_var = make_symetric_matrix(kp_var)
+#        kp_video['var'] = kp_var
     
     return kp_video
 
@@ -45,11 +69,11 @@ def compute_center_scale(kp_array):
 
 def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
     log_dir = os.path.join(log_dir, 'transfer')
+    png_dir = os.path.join(log_dir, 'png')
     transfer_params = config['transfer_params']
 
     dataset = PairedDataset(initial_dataset=dataset, number_of_pairs=transfer_params['num_pairs'])
-    dataloader = DataLoader(dataset, batch_size=1,
-                            shuffle=False, num_workers=1)
+    dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=1)
 
     if checkpoint is not None:
         Logger.load_cpk(checkpoint, generator=generator, kp_extractor=kp_extractor)
@@ -58,6 +82,9 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
 
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
+
+    if not os.path.exists(png_dir):
+        os.makedirs(png_dir)
 
     generator = generator.module
 
@@ -81,8 +108,15 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
                             for kp in kp_video_list], dim=2)
             out['kp_video'] = kp_video
             out['kp_appearance'] = kp_appearance
-            
+            out['kp_norm'] = kp_video_norm
+
+            img_name = "-".join([x['first_name'][0], x['second_name'][0]]) 
+ 
+            #Store to .png for evaluation
+            out_video_batch = out['video_prediction'].data.cpu().numpy()
+            out_video_batch = np.concatenate(np.transpose(out_video_batch, [0, 2, 3, 4, 1])[0], axis=1)
+            imageio.imsave(os.path.join(png_dir, img_name + '.png'), (255 * out_video_batch).astype(np.uint8))  
+  
             image = Visualizer().visualize_transfer(inp=x, out=out)
 
-            img_name = "-".join([x['first_name'][0], x['second_name'][0]]) + transfer_params['format']
-            imageio.mimsave(os.path.join(log_dir, img_name), image)
+            imageio.mimsave(os.path.join(log_dir, img_name + transfer_params['format']), image)

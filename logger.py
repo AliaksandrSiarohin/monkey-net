@@ -142,6 +142,8 @@ class Visualizer:
 
         kp_video = out['kp_video']['mean'].data.cpu().numpy()
         kp_appearance = out['kp_appearance']['mean'].data.cpu().repeat(1, out_video_batch.shape[2], 1, 1).numpy()
+        kp_norm = out['kp_norm']['mean'].data.cpu().numpy()
+ 
 
         out_video_batch = np.transpose(out_video_batch, [0, 2, 3, 4, 1])
         motion_video_batch = np.transpose(motion_video_batch, [0, 2, 3, 4, 1])
@@ -149,7 +151,7 @@ class Visualizer:
         appearance_deformed_batch = np.transpose(appearance_deformed_batch, [0, 2, 3, 4, 1])
 
         image = self.create_image_grid((appearance_video_batch, kp_appearance), (motion_video_batch, kp_video),
-                                       out_video_batch, appearance_deformed_batch)
+                                       (out_video_batch, kp_norm), out_video_batch, appearance_deformed_batch)
         image = (255 * image).astype(np.uint8)
         return image
 

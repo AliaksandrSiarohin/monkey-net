@@ -91,10 +91,14 @@ class PairedDataset(Dataset):
         self.initial_dataset = initial_dataset
         classes_list = self.initial_dataset.classes_list
 
+        np.random.seed(seed)
+ 
         if classes_list is None:
             max_idx = min(number_of_pairs, len(initial_dataset))
             nx, ny = max_idx, max_idx
             xy = np.mgrid[:nx,:ny].reshape(2, -1).T
+            number_of_pairs = min(xy.shape[0], number_of_pairs)
+            self.pairs = xy.take(np.random.choice(xy.shape[0], number_of_pairs, replace=False), axis=0)
         else:
             images = self.initial_dataset.images
             name_to_index = {name:index for index, name in enumerate(images)}
@@ -113,9 +117,8 @@ class PairedDataset(Dataset):
 
             xy = np.array(xy)
 
-        number_of_pairs = min(xy.shape[0], number_of_pairs)
-        np.random.seed(seed)
-        self.pairs = xy[:number_of_pairs] #xy.take(np.random.choice(xy.shape[0], number_of_pairs, replace=False), axis=0)
+            number_of_pairs = min(xy.shape[0], number_of_pairs)
+            self.pairs = xy[:number_of_pairs]
 
     def __len__(self):
         return len(self.pairs)

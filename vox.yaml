@@ -66,6 +66,6 @@ schedule_params:
 
 loss_weights:
   reconstruction: [10, 10, 10, 10, 1]
-  reconstruction_deformed: [10, 0, 0, 0, 0]
+  reconstruction_deformed: [0, 0, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1

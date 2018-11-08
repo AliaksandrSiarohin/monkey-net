@@ -33,6 +33,9 @@ class KpDataset(Dataset):
 def prediction(config, generator, kp_extractor, checkpoint, log_dir):
     dataset = FramesDataset(is_train=True, transform=VideoToTensor(), **config['dataset_params'])
     log_dir = os.path.join(log_dir, 'prediction')
+
+    png_dir = os.path.join(log_dir, 'png')
+
     if checkpoint is not None:
         Logger.load_cpk(checkpoint, generator=generator, kp_extractor=kp_extractor)
     else:
@@ -41,6 +44,9 @@ def prediction(config, generator, kp_extractor, checkpoint, log_dir):
 
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
+
+    if not os.path.exists(png_dir):
+        os.makedirs(png_dir)
 
     print("Extracting keypoints...")
 
@@ -117,6 +123,7 @@ def prediction(config, generator, kp_extractor, checkpoint, log_dir):
             kp_video = predictor(kp_init)
             for k in kp_video:
                 kp_video[k][:, :init_frames] = kp_init[k][:, :init_frames]
+            kp_video['var'] = kp_init['var'][:, (init_frames-1):init_frames].repeat(1, kp_video['var'].shape[1], 1, 1, 1)
             out = {'video_prediction': [], 'video_deformed': []}
             for i in range(x['video_array'].shape[2]):
                      kp_target = {k: v[:, i:(i + 1)] for k, v in kp_video.items()}
@@ -132,6 +139,10 @@ def prediction(config, generator, kp_extractor, checkpoint, log_dir):
 
             x['appearance_array'] = x['video_array'][:, :, :1]
 
+            out_video_batch = out['video_prediction'].data.cpu().numpy()
+            out_video_batch = np.concatenate(np.transpose(out_video_batch, [0, 2, 3, 4, 1])[0], axis=1) 
+            imageio.imsave(os.path.join(png_dir, x['name'][0] + '.png'), (255 * out_video_batch).astype(np.uint8))  
+ 
             image = Visualizer().visualize_reconstruction(x, out)
             image_name = x['name'][0] + prediction_params['format']
             imageio.mimsave(os.path.join(log_dir, image_name), image)

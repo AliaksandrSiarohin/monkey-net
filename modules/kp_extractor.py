@@ -33,13 +33,14 @@ def kp2gaussian(kp, spatial_size, kp_variance='matrix'):
         out = torch.exp(-0.5 * (mean_sub ** 2).sum(-1) / kp['var'])
     else:
         out = torch.exp(-0.5 * (mean_sub ** 2).sum(-1) / kp_variance)
-
+     
     out_shape = out.shape
     out = out.view(out_shape[0], out_shape[1], out_shape[2], -1)
     
     heatmap = out / out.sum(dim=3, keepdim=True)
-    heatmap[torch.isnan(heatmap)] = 0
+#    heatmap[torch.isnan(heatmap)] = 0
     out = heatmap.view(*out_shape)
+
     return out
 
 
@@ -87,7 +88,6 @@ class KPExtractor(nn.Module):
 
     def forward(self, x):
         heatmap = self.predictor(x)
-
         final_shape = heatmap.shape
         heatmap = heatmap.view(final_shape[0], final_shape[1], final_shape[2], -1)
         heatmap = F.softmax(heatmap / self.temperature, dim=3)

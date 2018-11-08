@@ -8,7 +8,9 @@ import numpy as np
 import imageio
 
 def reconstruction(config, generator, kp_extractor, checkpoint, log_dir, dataset):
+    png_dir = os.path.join(log_dir, 'reconstruction/png')
     log_dir = os.path.join(log_dir, 'reconstruction')
+
     if checkpoint is not None:
         Logger.load_cpk(checkpoint, generator=generator, kp_extractor=kp_extractor)
     else:
@@ -18,10 +20,17 @@ def reconstruction(config, generator, kp_extractor, checkpoint, log_dir, dataset
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
+    if not os.path.exists(png_dir):
+        os.makedirs(png_dir)
+
     loss_list = []
     generator.eval()
     kp_extractor.eval()
+
+    
     for it, x in tqdm(enumerate(dataloader)):
+        if it == 1000:
+           break
         with torch.no_grad():               
             kp_appearance = kp_extractor(x['video_array'][:, :, :1])                    
             kp_video = []
@@ -41,6 +50,11 @@ def reconstruction(config, generator, kp_extractor, checkpoint, log_dir, dataset
 
             x['appearance_array'] = x['video_array'][:, :, :1]
             
+            #Store to .png for evaluation
+            out_video_batch = out['video_prediction'].data.cpu().numpy()
+            out_video_batch = np.concatenate(np.transpose(out_video_batch, [0, 2, 3, 4, 1])[0], axis=1) 
+            imageio.imsave(os.path.join(png_dir, x['name'][0] + '.png'), (255 * out_video_batch).astype(np.uint8))  
+        
             image = Visualizer().visualize_reconstruction(x, out)
             image_name = x['name'][0] + config['transfer_params']['format']
             imageio.mimsave(os.path.join(log_dir, image_name), image)
