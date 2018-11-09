@@ -1,0 +1,95 @@
+<!-- HIT template: ImageAorB-v3.0 --><!-- The following snippet enables the 'responsive' behavior on smaller screens -->
+<meta content="width=device-width,initial-scale=1" name="viewport" /><!-- Image A/B Layout -->
+<section class="container" id="ImageAorB"><!-- Instructions -->
+<div class="row">
+<div class="col-xs-12 col-md-12">
+<div class="panel panel-primary"><!-- WARNING: the ids "collapseTrigger" and "instructionBody" are being used to enable expand/collapse feature --><a class="panel-heading" href="javascript:void(0);" id="collapseTrigger">Indicate which of the 2 videos is more realistic animation of the reference image.</a>
+<div class="panel-body" id="instructionBody"><!-- Add instruction body content here -->
+<p>Indicate which of the 2 videos (A or B) is more realistic animation of the reference image (Reference). Realistic animation should preserve the object that was initially on the image.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- End Instructions -->
+
+<div class="row">
+<div class="col-xs-12 col-sm-12">
+<div class="form-group"><label class="btn btn-default img-btn"><span class="clearfix img-label"><span class="pull-left"><strong>Reference</strong></span> </span> <span class="img-wrap"> <img alt="Option A" class="img-thumbnail img-check" src="https://s3.amazonaws.com/user-study-mtm/${appearance}" style="width:128px;height:128px;" /> </span> </label></div>
+</div>
+
+<div class="row">
+<div class="col-xs-12 col-sm-6 col-md-6">
+<div class="form-group"><label class="btn btn-default img-btn"><span class="clearfix img-label"><input autocomplete="off" class="pull-left img-options" id="itemA" name="choice" required="" type="radio" value="optionA" /> <span class="pull-left"><strong>Option A</strong></span> </span> <span class="img-wrap"> <img alt="Option A" class="img-thumbnail img-check" src="https://s3.amazonaws.com/user-study-mtm/${first}" style="width:128px;height:128px;" /> </span> </label></div>
+</div>
+
+<div class="col-xs-12 col-sm-6 col-md-6">
+<div class="form-group"><label class="btn btn-default img-btn"><span class="clearfix img-label"><input autocomplete="off" class="pull-left img-options" id="itemB" name="choice" required="" type="radio" value="optionB" /> <span class="pull-left"><strong>Option B</strong></span> </span> <span class="img-wrap"> &lt;img alt=&quot;Option B&quot; style=&quot;width:128px;height:128px; class=&quot; img-thumbnail=&quot;&quot; img-check&quot;=&quot;&quot; data-cke-saved-src=&quot;https://s3.amazonaws.com/user-study-mtm/${second}&quot; src=&quot;https://s3.amazonaws.com/user-study-mtm/${second}&quot;&gt; </span> </label></div>
+</div>
+</div>
+</div>
+</section>
+<!-- End Image A/B Layout --><!-- Please note that Bootstrap CSS/JS and JQuery are 3rd party libraries that may update their url/code at any time. Amazon Mechanical Turk (MTurk) is including these libraries as a default option for you, but is not responsible for any changes to the external libraries --><!-- External CSS references -->
+<link crossorigin="anonymous" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" integrity="sha384-IS73LIqjtYesmURkDE9MXKbXqYA8rvKEp/ghicjem7Vc3mGRdQRptJSz60tvrB6+" rel="stylesheet" /><!-- Open internal style sheet -->
+<style type="text/css">#collapseTrigger{
+  color:#fff;
+  display: block;
+  text-decoration: none;
+}
+#submitButton{
+  white-space: normal;
+}
+input.img-options{
+	margin: 3px 10px 5px 8px;
+}
+.img-check{
+	padding: 0;
+}
+.img-label{
+	padding: 6px 6px 0 6px;
+	min-width: 300px;
+	display: block;
+}
+.img-wrap{
+	background: transparent;
+	padding: 6px 12px;
+	display: block;
+}
+.img-background{
+	background: #5cb85c;
+}
+.img-btn{
+	padding: 0;
+	display: block;
+}
+</style>
+<!-- Close internal style sheet --><!-- External JS references --><script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" crossorigin="anonymous"></script><script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js" integrity="sha384-s1ITto93iSMDxlp/79qhWHi+LsIi9Gx6yL+cOKDuymvihkfol83TYbLbOw+W/wv4" crossorigin="anonymous"></script><!-- Open internal javascript --><script>
+$(document).ready(function(e){
+	// Instructions expand/collapse
+  var content = $('#instructionBody');
+  var trigger = $('#collapseTrigger');
+  content.hide();
+  $('.collapse-text').text('(Click to expand)');
+  trigger.click(function(){
+    content.toggle();
+    var isVisible = content.is(':visible');
+    if(isVisible){
+      $('.collapse-text').text('(Click to collapse)');
+    }else{
+      $('.collapse-text').text('(Click to expand)');
+    }
+  });
+  // end expand/collapse
+	// Highlight selection
+	var imageBackgroundSelector = ".img-wrap";
+	var imageBackgroundElement = $(imageBackgroundSelector);
+	$("#ImageAorB input:radio").click(function(){
+		imageBackgroundElement.removeClass("img-background");
+		if($(this).is(':checked')){
+			$(this).parent().siblings(imageBackgroundSelector).addClass("img-background");
+		}else{
+			$(this).parent().siblings(imageBackgroundSelector).remove("img-background");
+		}
+	});
+	// end highlight selection
+});
+</script><!-- Close internal javascript-->
