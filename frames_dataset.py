@@ -53,7 +53,7 @@ class FramesDataset(Dataset):
 
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir, self.images[idx])
-        if img_name.endswith('.png') or img_name.endswith('.jpg'):
+        if img_name.lower().endswith('.png') or img_name.lower().endswith('.jpg'):
             image = io.imread(img_name)
 
             if len(image.shape) == 2 or image.shape[2] == 1:
@@ -68,8 +68,10 @@ class FramesDataset(Dataset):
 
             video_array = video_array.reshape((-1, ) + self.image_shape)
             video_array = np.moveaxis(video_array, 1, 2)
-        elif img_name.endswith('.gif') or img_name.endswith('.mp4'):
+        elif img_name.lower().endswith('.gif') or img_name.lower().endswith('.mp4'):
             video = np.array(mimread(img_name))
+            if len(video.shape) == 3:
+                video = np.array([gray2rgb(frame) for frame in video])
             if video.shape[-1] == 4:
                 video = video[..., :3]
             video_array = img_as_float32(video)
