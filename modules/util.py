@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torch
 
 import numpy as np
-
+from sync_batchnorm import SynchronizedBatchNorm3d as BatchNorm3d
 
 def compute_image_gradient(image, padding=0):
     bs, c, h, w = image.shape
@@ -46,8 +46,8 @@ class ResBlock3D(nn.Module):
         super(ResBlock3D, self).__init__()
         self.conv1 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=kernel_size, padding=padding)
         self.conv2 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=kernel_size, padding=padding)
-        self.norm1 = nn.BatchNorm3d(in_features, affine=True)
-        self.norm2 = nn.BatchNorm3d(in_features, affine=True)
+        self.norm1 = BatchNorm3d(in_features, affine=True)
+        self.norm2 = BatchNorm3d(in_features, affine=True)
 
     def forward(self, x):
         out = x
@@ -69,7 +69,7 @@ class UpBlock3D(nn.Module):
         super(UpBlock3D, self).__init__()
 
         self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features, kernel_size=kernel_size, padding=padding)
-        self.norm = nn.BatchNorm3d(out_features, affine=True)
+        self.norm = BatchNorm3d(out_features, affine=True)
 
     def forward(self, x):
         out = F.interpolate(x, scale_factor=(1, 2, 2))
@@ -86,7 +86,7 @@ class DownBlock3D(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3, padding=1):
         super(DownBlock3D, self).__init__()
         self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features, kernel_size=kernel_size, padding=padding)
-        self.norm = nn.BatchNorm3d(out_features, affine=True)
+        self.norm = BatchNorm3d(out_features, affine=True)
         self.pool = nn.AvgPool3d(kernel_size=(1, 2, 2))
 
     def forward(self, x):
@@ -105,7 +105,7 @@ class SameBlock3D(nn.Module):
         super(SameBlock3D, self).__init__()
         self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features,
                               kernel_size=kernel_size, padding=padding, groups=groups)
-        self.norm = nn.BatchNorm3d(out_features, affine=True)
+        self.norm = BatchNorm3d(out_features, affine=True)
 
     def forward(self, x):
         out = self.conv(x)

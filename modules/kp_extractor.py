@@ -38,7 +38,7 @@ def kp2gaussian(kp, spatial_size, kp_variance='matrix'):
     out = out.view(out_shape[0], out_shape[1], out_shape[2], -1)
     
     heatmap = out / out.sum(dim=3, keepdim=True)
-#    heatmap[torch.isnan(heatmap)] = 0
+    heatmap[torch.isnan(heatmap)] = 0
     out = heatmap.view(*out_shape)
 
     return out

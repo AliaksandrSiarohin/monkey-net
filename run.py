@@ -19,6 +19,8 @@ from reconstruction import reconstruction
 from transfer import transfer
 from prediction import prediction
 
+from sync_batchnorm import  DataParallelWithCallback
+
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--config", required=True, help="path to config")
@@ -49,17 +51,17 @@ if __name__ == "__main__":
 
     generator = DDModel(**config['model_params']['generator_params'], **config['model_params']['common_params'])
     generator.to(opt.device_ids[0])
-    generator = torch.nn.DataParallel(module=generator, device_ids=opt.device_ids)
+    generator = DataParallelWithCallback(module=generator, device_ids=opt.device_ids)
     print(generator)
 
     discriminator = Discriminator(**config['model_params']['discriminator_params'], **config['model_params']['common_params'])
     discriminator.to(opt.device_ids[0])
-    discriminator = torch.nn.DataParallel(module=discriminator, device_ids=opt.device_ids)
+    discriminator = DataParallelWithCallback(module=discriminator, device_ids=opt.device_ids)
     print(discriminator)
 
     kp_extractor = KPExtractor(**config['model_params']['kp_extractor_params'], **config['model_params']['common_params'])
     kp_extractor.to(opt.device_ids[0])
-    kp_extractor = torch.nn.DataParallel(module=kp_extractor, device_ids=opt.device_ids)
+    kp_extractor = DataParallelWithCallback(module=kp_extractor, device_ids=opt.device_ids)
     print(kp_extractor)
 
     dataset = FramesDataset(is_train=(opt.mode == 'train'), **config['dataset_params'])

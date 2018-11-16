@@ -42,9 +42,9 @@ def normalize_kp(kp_video, kp_appearance, movement_mult=True, move_location=True
         kp_video_diff = (kp_video['mean'] - kp_video['mean'][:, 0:1]) 
         kp_video_diff *= movement_mult
         kp_video['mean'] = kp_video_diff  + kp_appearance['mean']
-        one = torch.ones(1).type(kp_video_diff.type()) 
-        kp_video['mean'] = torch.max(kp_video['mean'], -one)
-        kp_video['mean'] = torch.min(kp_video['mean'], one)
+#        one = torch.ones(1).type(kp_video_diff.type()) 
+#        kp_video['mean'] = torch.max(kp_video['mean'], -one)
+#        kp_video['mean'] = torch.min(kp_video['mean'], one)
 
 
 #    if ('var' in kp_video) and move_location:
@@ -110,8 +110,8 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
             out['kp_appearance'] = kp_appearance
             out['kp_norm'] = kp_video_norm
 
-            img_name = "-".join([x['first_name'][0], x['second_name'][0]]) 
- 
+            img_name = "-".join([x['first_name'][0], x['second_name'][0]])
+
             #Store to .png for evaluation
             out_video_batch = out['video_prediction'].data.cpu().numpy()
             out_video_batch = np.concatenate(np.transpose(out_video_batch, [0, 2, 3, 4, 1])[0], axis=1)
