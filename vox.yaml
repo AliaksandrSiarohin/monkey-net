@@ -3,10 +3,8 @@ dataset_params:
   classes_list: null
   image_shape: [256, 256, 3]
   augmentation_param:
-    select_frames_param:
-      consequent: True
     flip_param:
-      horizontal_flip: False
+      horizontal_flip: True
     crop_param:
       size: [256, 256]
 
@@ -62,7 +60,7 @@ schedule_params:
   lr_generator: [2.0e-4, 2.0e-5]
   lr_discriminator: [2.0e-4, 2.0e-5]
   lr_kp_extractor: [2.0e-4, 2.0e-5]
-  batch_size: [16, 16]
+  batch_size: [24, 24]
 
 loss_weights:
   reconstruction: [10, 10, 10, 10, 1]
