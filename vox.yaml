@@ -5,6 +5,7 @@ dataset_params:
   augmentation_param:
     flip_param:
       horizontal_flip: True
+      time_flip: True
     crop_param:
       size: [256, 256]
 
