@@ -86,7 +86,7 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
     if not os.path.exists(png_dir):
         os.makedirs(png_dir)
 
-    generator = generator.module
+#    generator = generator.module
 
     generator.eval()
     kp_extractor.eval()

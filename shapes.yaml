@@ -1,6 +1,6 @@
 dataset_params:
   image_shape: [64, 64, 3]
-  root_dir: data/shapes_resizing
+  root_dir: data/shapes
   augmentation_param:
     flip_param:
       time_flip: True
@@ -17,6 +17,8 @@ log_params:
 transfer_params:
   num_pairs: 100
   format: '.gif'
+  move_location: False
+  movement_mult: False
 
 model_params:
   detach_kp_generator: False
@@ -66,7 +68,7 @@ schedule_params:
 
 loss_weights:
   reconstruction: [10, 10, 10 , 10]
-  reconstruction_deformed: [10, 0, 0, 0]
+  reconstruction_deformed: [0, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1
 

@@ -6,6 +6,7 @@ from logger import Logger, Visualizer
 from modules.losses import reconstruction_loss
 import numpy as np
 import imageio
+from sync_batchnorm import  DataParallelWithCallback
 
 def reconstruction(config, generator, kp_extractor, checkpoint, log_dir, dataset):
     png_dir = os.path.join(log_dir, 'reconstruction/png')
@@ -24,6 +25,9 @@ def reconstruction(config, generator, kp_extractor, checkpoint, log_dir, dataset
         os.makedirs(png_dir)
 
     loss_list = []
+    generator = DataParallelWithCallback(generator)
+    kp_extractor = DataParallelWithCallback(kp_extractor)
+
     generator.eval()
     kp_extractor.eval()
 
