@@ -11,8 +11,7 @@ from torch.autograd import Variable
 import warnings
 import gc
 from sync_batchnorm import DataParallelWithCallback
-
-
+from functools import reduce
 
 def set_optimizer_lr(optimizer, lr):
     for param_group in optimizer.param_groups:
@@ -56,13 +55,14 @@ class GeneratorFullModel(torch.nn.Module):
                 discriminator_maps_deformed = self.discriminator(video_deformed, **kp_dict)
         else:
             discriminator_maps_deformed = None
+
+
+
         loss = generator_loss(discriminator_maps_generated=discriminator_maps_generated,
                                                          discriminator_maps_deformed=discriminator_maps_deformed,
                                                          discriminator_maps_real=discriminator_maps_real,
                                                          loss_weights=self.config['loss_weights'])
-        
-#        self.gen_values = gen_values
-#        self.gen_names = gen_names          
+
         return  tuple(loss) + (generated, kp_joined)
  
 
@@ -81,8 +81,6 @@ class DiscriminatorFullModel(torch.nn.Module):
         loss = discriminator_loss(discriminator_maps_generated=discriminator_maps_generated,
                                   discriminator_maps_real=discriminator_maps_real,
                                   loss_weights=self.config['loss_weights'])
-#       self.disc_values = disc_value
-#       self.disc_names = disc_names
         return loss
 
 
@@ -128,7 +126,7 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                 generator_loss_values = [val.detach().cpu().numpy() for val in loss_values]
 
                 loss = sum(loss_values) 
-                loss.backward(retain_graph=not config['model_params']['detach_kp_discriminator'])                      
+                loss.backward(retain_graph=not config['model_params']['detach_kp_discriminator'])               
                 optimizer_generator.step()
                 optimizer_generator.zero_grad()
                 optimizer_discriminator.zero_grad()

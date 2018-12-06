@@ -30,8 +30,7 @@ def reconstruction(config, generator, kp_extractor, checkpoint, log_dir, dataset
 
     generator.eval()
     kp_extractor.eval()
-
-    
+  
     for it, x in tqdm(enumerate(dataloader)):
         if it == 1000:
            break
@@ -53,7 +52,7 @@ def reconstruction(config, generator, kp_extractor, checkpoint, log_dir, dataset
             out['kp_appearance'] = kp_appearance
 
             x['appearance_array'] = x['video_array'][:, :, :1]
-            
+             
             #Store to .png for evaluation
             out_video_batch = out['video_prediction'].data.cpu().numpy()
             out_video_batch = np.concatenate(np.transpose(out_video_batch, [0, 2, 3, 4, 1])[0], axis=1) 
@@ -67,5 +66,4 @@ def reconstruction(config, generator, kp_extractor, checkpoint, log_dir, dataset
                                        config['loss_weights']['reconstruction'][0])
             loss_list.append(loss.data.cpu().numpy())
             del x, kp_video, kp_appearance, out, loss
-
     print ("Reconstruction loss: %s" % np.mean(loss_list))

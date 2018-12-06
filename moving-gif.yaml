@@ -1,14 +1,16 @@
 dataset_params:
-  root_dir: data/moving-gif
-  classes_list: null
-  image_shape: [256, 256, 3]
+  root_dir: data/moving-gif-128
+  classes_list: data/moving-gif.csv
+  image_shape: [128, 128, 3]
   augmentation_param:
     flip_param:
       horizontal_flip: True
     crop_param:
       size: [128, 128]
     resize_param:
-      ratio: [0.5, 0.5]
+      ratio: [0.9, 1.1]
+    jitter_param:
+      hue: 0.5
 
 log_params:
   log_freq_iter: 200
@@ -17,6 +19,8 @@ log_params:
 transfer_params:
   num_pairs: 100
   format: '.gif'
+  move_location: False
+  movement_mult: False
 
 model_params:
   detach_kp_generator: False
@@ -66,6 +70,6 @@ schedule_params:
 
 loss_weights:
   reconstruction: [10, 10, 10, 10, 1]
-  reconstruction_deformed: [10, 0, 0, 0, 0]
+  reconstruction_deformed: [0, 0, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1

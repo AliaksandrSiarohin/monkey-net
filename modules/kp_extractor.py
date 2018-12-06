@@ -1,8 +1,8 @@
 from torch import nn
 import torch
 import torch.nn.functional as F
-from modules.util import Hourglass, make_coordinate_grid, matrix_inverse
-
+from modules.util import Hourglass, make_coordinate_grid, matrix_inverse, matrix_det
+import numpy as np
 
 def kp2gaussian(kp, spatial_size, kp_variance='matrix'):
     mean = kp['mean']
@@ -25,8 +25,8 @@ def kp2gaussian(kp, spatial_size, kp_variance='matrix'):
         var = kp['var']
         inv_var = matrix_inverse(var)
         shape = inv_var.shape[:number_of_leading_dimensions] + (1, 1, 2, 2)
-        var = inv_var.view(*shape)
-        under_exp = torch.matmul(torch.matmul(mean_sub.unsqueeze(-2), var), mean_sub.unsqueeze(-1))
+        inv_var = inv_var.view(*shape)
+        under_exp = torch.matmul(torch.matmul(mean_sub.unsqueeze(-2), inv_var), mean_sub.unsqueeze(-1))
         under_exp = under_exp.squeeze(-1).squeeze(-1)
         out = torch.exp(-0.5 * under_exp)
     elif kp_variance == 'single':
@@ -35,12 +35,7 @@ def kp2gaussian(kp, spatial_size, kp_variance='matrix'):
         out = torch.exp(-0.5 * (mean_sub ** 2).sum(-1) / kp_variance)
      
     out_shape = out.shape
-    out = out.view(out_shape[0], out_shape[1], out_shape[2], -1)
-    
-    heatmap = out / out.sum(dim=3, keepdim=True)
-    heatmap[torch.isnan(heatmap)] = 0
-    out = heatmap.view(*out_shape)
-
+    out = out / 1000
     return out
 
 
@@ -60,6 +55,7 @@ def gaussian2kp(heatmap, kp_variance='matrix'):
         var = var.sum(dim=(3, 4))
         var = var.permute(0, 2, 1, 3, 4)
         kp['var'] = var
+        
     elif kp_variance == 'single':
         mean_sub = grid - mean.unsqueeze(-2).unsqueeze(-2)
         var = mean_sub ** 2

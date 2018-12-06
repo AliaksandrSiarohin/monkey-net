@@ -10,6 +10,7 @@ from modules.prediction_module import PredictionModule
 from augmentation import SelectRandomFrames, VideoToTensor
 from tqdm import trange
 from frames_dataset import FramesDataset
+from sync_batchnorm import  DataParallelWithCallback
 
 
 class KpDataset(Dataset):
@@ -41,6 +42,9 @@ def prediction(config, generator, kp_extractor, checkpoint, log_dir):
     else:
         raise AttributeError("Checkpoint should be specified for mode='prediction'.")
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=1)
+
+    generator = DataParallelWithCallback(generator)
+    kp_extractor = DataParallelWithCallback(kp_extractor)
 
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -92,8 +96,6 @@ def prediction(config, generator, kp_extractor, checkpoint, log_dir):
             for k in x:
                 x[k][:, init_frames:] = 0
             prediction = predictor(x)
-            #prediction = {k: v[:, :-1] for k, v in prediction.items()}
-            #target = {k: v[:, 1:] for k, v in x.items()}
 
             loss = sum([torch.abs(gt[k][:, init_frames:] - prediction[k][:, init_frames:]).mean() for k in x])
 
@@ -123,7 +125,8 @@ def prediction(config, generator, kp_extractor, checkpoint, log_dir):
             kp_video = predictor(kp_init)
             for k in kp_video:
                 kp_video[k][:, :init_frames] = kp_init[k][:, :init_frames]
-            kp_video['var'] = kp_init['var'][:, (init_frames-1):init_frames].repeat(1, kp_video['var'].shape[1], 1, 1, 1)
+            if 'var' in kp_video:
+                kp_video['var'] = kp_init['var'][:, (init_frames-1):init_frames].repeat(1, kp_video['var'].shape[1], 1, 1, 1)
             out = {'video_prediction': [], 'video_deformed': []}
             for i in range(x['video_array'].shape[2]):
                      kp_target = {k: v[:, i:(i + 1)] for k, v in kp_video.items()}
