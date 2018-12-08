@@ -4,13 +4,14 @@ import torch
 from torch.utils.data import DataLoader
 
 from logger import Logger
-from modules.losses import generator_loss, discriminator_loss
+from modules.losses import generator_loss, discriminator_loss, generator_loss_names, discriminator_loss_names
 
 import numpy as np
 from torch.autograd import Variable
 import warnings
 import gc
- 
+from sync_batchnorm import DataParallelWithCallback
+from functools import reduce
 
 def set_optimizer_lr(optimizer, lr):
     for param_group in optimizer.param_groups:
@@ -27,7 +28,63 @@ def split_kp(kp_joined, detach=False):
     return {'kp_video': kp_video, 'kp_appearance': kp_appearance}
 
 
-def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, dataset):
+class GeneratorFullModel(torch.nn.Module):
+    def __init__(self, kp_extractor, generator, discriminator, config):
+        super(GeneratorFullModel, self).__init__()
+        self.kp_extractor = kp_extractor
+        self.generator = generator
+        self.discriminator = discriminator
+        self.config = config
+
+    def forward(self, x):
+        kp_joined = self.kp_extractor(torch.cat([x['appearance_array'], x['video_array']], dim=2))
+        generated = self.generator(x['appearance_array'], **split_kp(kp_joined, self.config['model_params']['detach_kp_generator']))
+        video_prediction = generated['video_prediction']
+        video_deformed = generated['video_deformed']
+
+        kp_dict = split_kp(kp_joined, False)
+        discriminator_maps_generated = self.discriminator(video_prediction, **kp_dict)
+        discriminator_maps_real = self.discriminator(x['video_array'], **kp_dict)
+        generated.update(kp_dict)
+
+        if self.config['loss_weights']['reconstruction_deformed'] is not None:
+            if np.abs(self.config['loss_weights']['reconstruction_deformed'][1:]).sum() == 0:
+                        #Only reconstruction of deformed_video
+                discriminator_maps_deformed = [video_deformed] + [None] * (len(discriminator_maps_real) - 1)
+            else:
+                discriminator_maps_deformed = self.discriminator(video_deformed, **kp_dict)
+        else:
+            discriminator_maps_deformed = None
+
+
+
+        loss = generator_loss(discriminator_maps_generated=discriminator_maps_generated,
+                                                         discriminator_maps_deformed=discriminator_maps_deformed,
+                                                         discriminator_maps_real=discriminator_maps_real,
+                                                         loss_weights=self.config['loss_weights'])
+
+        return  tuple(loss) + (generated, kp_joined)
+ 
+
+class DiscriminatorFullModel(torch.nn.Module):
+    def __init__(self, kp_extractor, generator, discriminator, config):
+        super(DiscriminatorFullModel, self).__init__() 
+        self.kp_extractor = kp_extractor
+        self.generator = generator
+        self.discriminator = discriminator
+        self.config = config
+
+    def forward(self, x, kp_joined, generated):
+        kp_dict = split_kp(kp_joined, self.config['model_params']['detach_kp_discriminator'])
+        discriminator_maps_generated = self.discriminator(generated['video_prediction'].detach(), **kp_dict)
+        discriminator_maps_real = self.discriminator(x['video_array'], **kp_dict)
+        loss = discriminator_loss(discriminator_maps_generated=discriminator_maps_generated,
+                                  discriminator_maps_real=discriminator_maps_real,
+                                  loss_weights=self.config['loss_weights'])
+        return loss
+
+
+def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, dataset, device_ids):
     start_epoch = 0
     it = 0
 
@@ -49,59 +106,40 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
     set_optimizer_lr(optimizer_kp_extractor, config['schedule_params']['lr_kp_extractor'][schedule_iter])
 
     dataset.set_number_of_frames_per_sample(config['schedule_params']['frames_per_sample'][schedule_iter])
+
+    generator_full = GeneratorFullModel(kp_extractor, generator, discriminator, config) 
+    discriminator_full = DiscriminatorFullModel(kp_extractor, generator, discriminator, config) 
+ 
+    generator_full_par = DataParallelWithCallback(generator_full, device_ids=device_ids)
+    discriminator_full_par = DataParallelWithCallback(discriminator_full, device_ids=device_ids)
+
     with Logger(generator=generator, discriminator=discriminator, kp_extractor=kp_extractor, optimizer_generator=optimizer_generator,
                 optimizer_discriminator=optimizer_discriminator, optimizer_kp_extractor=optimizer_kp_extractor,
                 log_dir=log_dir, **config['log_params']) as logger:
         for epoch in trange(start_epoch, epochs_milestones[-1]):
             for x in dataloader:
-                #Concatenate appearance and video to properly work with batchnorm
-                kp_joined = kp_extractor(torch.cat([x['appearance_array'], x['video_array']], dim=2))
-                #x['appearance_array'] = x['video_array'][:, :, :1]
-                generated = generator(x['appearance_array'], **split_kp(kp_joined, config['model_params']['detach_kp_generator']))
-                video_prediction = generated['video_prediction']
-                video_deformed = generated['video_deformed']
+                out = generator_full_par(x)
+                loss_values = out[:-2]
+                generated = out[-2]
+                kp_joined = out[-1]
+                loss_values = [val.mean() for val in loss_values]
+                generator_loss_values = [val.detach().cpu().numpy() for val in loss_values]
 
-                kp_dict = split_kp(kp_joined, False)
-                discriminator_maps_generated = discriminator(video_prediction, **kp_dict)
-                discriminator_maps_real = discriminator(x['video_array'], **kp_dict)
-                generated.update(kp_dict)
-
-                if config['loss_weights']['reconstruction_deformed'] is not None:
-                    if np.abs(config['loss_weights']['reconstruction_deformed'][1:]).sum() == 0:
-                        #Only reconstruction of deformed_video
-                        discriminator_maps_deformed = [video_deformed] + [None] * (len(discriminator_maps_real) - 1)
-                    else:
-                        discriminator_maps_deformed = discriminator(video_deformed, **kp_dict)
-                else:
-                    discriminator_maps_deformed = None
-
-                loss, gen_loss_names, gen_loss_values = generator_loss(discriminator_maps_generated=discriminator_maps_generated,
-                                                                       discriminator_maps_deformed=discriminator_maps_deformed,
-                                                                       discriminator_maps_real=discriminator_maps_real,
-                                                                       loss_weights=config['loss_weights'])
-                
-                loss.backward(retain_graph=not config['model_params']['detach_kp_discriminator'])
-
-                      
+                loss = sum(loss_values) 
+                loss.backward(retain_graph=not config['model_params']['detach_kp_discriminator'])               
                 optimizer_generator.step()
                 optimizer_generator.zero_grad()
                 optimizer_discriminator.zero_grad()
                 if config['model_params']['detach_kp_discriminator']:
                     optimizer_kp_extractor.step()
-                    optimizer_kp_extractor.zero_grad()
-                
-                del loss
-                del discriminator_maps_real
-                del discriminator_maps_generated
-                del discriminator_maps_deformed
+                    optimizer_kp_extractor.zero_grad()               
 
-                kp_dict = split_kp(kp_joined, config['model_params']['detach_kp_discriminator'])
-                discriminator_maps_generated = discriminator(video_prediction.detach(), **kp_dict)
-                discriminator_maps_real = discriminator(x['video_array'], **kp_dict)
-                loss, disc_loss_names, disc_loss_values = discriminator_loss(discriminator_maps_generated=discriminator_maps_generated,
-                                                                             discriminator_maps_real=discriminator_maps_real,
-                                                                             loss_weights=config['loss_weights'])
+                loss_values = discriminator_full_par(x, kp_joined, generated)
 
+                loss_values = [val.mean() for val in loss_values]
+                discriminator_loss_values = [val.detach().cpu().numpy() for val in loss_values]
+
+                loss = sum(loss_values) 
                 loss.backward()
                 optimizer_discriminator.step()
                 optimizer_discriminator.zero_grad()
@@ -109,17 +147,9 @@ def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, d
                     optimizer_kp_extractor.step()
                     optimizer_kp_extractor.zero_grad()
  
-                logger.log_iter(it, names=gen_loss_names + disc_loss_names,
-                                values=gen_loss_values + disc_loss_values, inp=x, out=generated)
+                logger.log_iter(it, names=generator_loss_names(config['loss_weights']) + discriminator_loss_names(),
+                                values=generator_loss_values + discriminator_loss_values, inp=x, out=generated)
                 it += 1
-
-                del discriminator_maps_real
-                del loss
-                del x
-                del video_prediction
-                del video_deformed
-                del generated
-                del discriminator_maps_generated
 
             if epoch in epochs_milestones:
                 schedule_iter = np.searchsorted(epochs_milestones, epoch, side='right')

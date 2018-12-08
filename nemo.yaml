@@ -1,13 +1,9 @@
 dataset_params:
   root_dir: data/nemo
-  classes_list: null
+  classes_list: data/nemo.csv
   augmentation_param:
-    rotation_param:
-      degrees: [-45, 45]
-    resize_param:
-      ratio: [0.75, 1.25]
     flip_param:
-      time_flip: False
+      time_flip: True
       horizontal_flip: True
     crop_param:
       size: [64, 64]

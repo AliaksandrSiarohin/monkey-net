@@ -3,10 +3,9 @@ dataset_params:
   classes_list: null
   image_shape: [256, 256, 3]
   augmentation_param:
-    select_frames_param:
-      consequent: True
     flip_param:
-      horizontal_flip: False
+      horizontal_flip: True
+      time_flip: True
     crop_param:
       size: [256, 256]
 

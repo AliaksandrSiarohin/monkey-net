@@ -11,35 +11,36 @@ from modules.util import matrix_inverse, matrix_det
 from scipy.spatial import ConvexHull
 import numpy as np
 
-#def make_symetric_matrix(torch_matrix):
-#    a = torch_matrix.cpu().numpy()
-#    print (a[0, 0, 0])
-#    print (np.linalg.det(a[0, 0, 0]))
-#    c = (a + np.transpose(a, (0, 1, 2, 4, 3))) / 2
-#    d, u = np.linalg.eig(c)
-#    d[d < 0] = 0
-#    d_matrix = np.zeros_like(a)
-#    d_matrix[..., 0, 0] = d[..., 0]
-#    d_matrix[..., 1, 1] = d[..., 1]
-#    res = np.matmul(np.matmul(u, d_matrix), np.transpose(u, (0, 1, 2, 4, 3)))
-#    print (res[0, 0, 0])
-#    res = torch.from_numpy(res).type(torch_matrix.type())
+from sync_batchnorm import  DataParallelWithCallback
+
+
+
+def make_symetric_matrix(torch_matrix):
+    a = torch_matrix.cpu().numpy()
+    c = (a + np.transpose(a, (0, 1, 2, 4, 3))) / 2
+    d, u = np.linalg.eig(c)
+    d[d <= 0] = 1e-6
+    d_matrix = np.zeros_like(a)
+    d_matrix[..., 0, 0] = d[..., 0]
+    d_matrix[..., 1, 1] = d[..., 1]
+    res = np.matmul(np.matmul(u, d_matrix), np.transpose(u, (0, 1, 2, 4, 3)))
+    res = torch.from_numpy(res).type(torch_matrix.type())
     
-#    return res
+    return res
     
 
-def normalize_kp(kp_video, kp_appearance, movement_mult=True, move_location=True):
+def normalize_kp(kp_video, kp_appearance, movement_mult=True, move_location=True, best_frame=0):
     if movement_mult:
         appearance_area = ConvexHull(kp_appearance['mean'][0, 0].data.cpu().numpy()).volume
-        video_area = ConvexHull(kp_video['mean'][0, 0].data.cpu().numpy()).volume  
-        movement_mult = appearance_area / video_area
+        video_area = ConvexHull(kp_video['mean'][0, best_frame].data.cpu().numpy()).volume  
+        movement_mult = np.sqrt(appearance_area) / np.sqrt(video_area)
     else:
         movement_mult = 1
 
     kp_video = {k: v for k, v in kp_video.items()}
    
     if move_location:
-        kp_video_diff = (kp_video['mean'] - kp_video['mean'][:, 0:1]) 
+        kp_video_diff = (kp_video['mean'] - kp_video['mean'][:, best_frame:(best_frame+1)]) 
         kp_video_diff *= movement_mult
         kp_video['mean'] = kp_video_diff  + kp_appearance['mean']
         one = torch.ones(1).type(kp_video_diff.type()) 
@@ -48,23 +49,16 @@ def normalize_kp(kp_video, kp_appearance, movement_mult=True, move_location=True
 
 
 #    if ('var' in kp_video) and move_location:
+#        var_first = kp_video['var'][:, 0:1].repeat(1, kp_video['var'].shape[1], 1, 1, 1)
+#        kp_var, _ = torch.gesv(var_first, kp_video['var'])
+
 #        kp_var = torch.matmul(kp_video['var'], matrix_inverse(kp_video['var'][:, 0:1], eps=0))
 #        kp_var = torch.matmul(kp_var, kp_appearance['var'])
-#
+       
 #        kp_var = make_symetric_matrix(kp_var)
 #        kp_video['var'] = kp_var
     
     return kp_video
-
-def compute_center_scale(kp_array):
-    bs, d, num_kp, _ = kp_array.shape
-
-    center = kp_array.mean(dim=2, keepdim=True).mean(dim=1, keepdim=True)
-    distances = kp_array - center
-    var = (distances ** 2).sum(dim=2, keepdim=True).sum(dim=1, keepdim=True)
-    sd = torch.sqrt(var)
-
-    return distances/ sd, center, sd
 
 
 def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
@@ -86,7 +80,8 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
     if not os.path.exists(png_dir):
         os.makedirs(png_dir)
 
-    generator = generator.module
+    generator = DataParallelWithCallback(generator)
+    kp_extractor = DataParallelWithCallback(kp_extractor)
 
     generator.eval()
     kp_extractor.eval()
@@ -110,8 +105,8 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
             out['kp_appearance'] = kp_appearance
             out['kp_norm'] = kp_video_norm
 
-            img_name = "-".join([x['first_name'][0], x['second_name'][0]]) 
- 
+            img_name = "-".join([x['first_name'][0], x['second_name'][0]])
+
             #Store to .png for evaluation
             out_video_batch = out['video_prediction'].data.cpu().numpy()
             out_video_batch = np.concatenate(np.transpose(out_video_batch, [0, 2, 3, 4, 1])[0], axis=1)

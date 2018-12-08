@@ -105,22 +105,13 @@ class PairedDataset(Dataset):
             images = self.initial_dataset.images
             name_to_index = {name:index for index, name in enumerate(images)}
             classes = pd.read_csv(classes_list)
-            classes = classes[classes['name'].isin(images)]
-            names = classes['name']
-            labels = classes['cls']
-
-            name_pairs = []
-            for cls in np.sort(np.unique(labels)):
-                name_pairs += list(combinations(names[labels == cls], 2))
-
-            xy = []
-            for first, second in name_pairs:
-                xy.append((name_to_index[first], name_to_index[second]))
-
-            xy = np.array(xy)
-
-            number_of_pairs = min(xy.shape[0], number_of_pairs)
-            self.pairs = xy[:number_of_pairs]
+            classes = classes[np.logical_and(classes['appearance'].isin(images), classes['video'].isin(images))]
+            
+            number_of_pairs = min(classes.shape[0], number_of_pairs)
+            self.pairs = []
+            self.start_frames = []
+            for ind in range(number_of_pairs):
+                self.pairs.append((name_to_index[classes['video'].iloc[ind]], name_to_index[classes['appearance'].iloc[ind]]))
 
     def __len__(self):
         return len(self.pairs)
@@ -129,7 +120,6 @@ class PairedDataset(Dataset):
         pair = self.pairs[idx]
         first = self.initial_dataset[pair[0]]
         second = self.initial_dataset[pair[1]]
-
         first = {'first_' + key: value for key, value in first.items()}
         second = {'second_' + key: value for key, value in second.items()}
 

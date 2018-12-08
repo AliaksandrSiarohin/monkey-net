@@ -16,7 +16,7 @@ log_params:
 transfer_params:
   num_pairs: 300
   format: '.gif'
-  movement_mult: True
+  movement_mult: False
   move_location: True
 
 model_params:

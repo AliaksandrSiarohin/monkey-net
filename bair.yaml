@@ -1,6 +1,6 @@
 dataset_params:
   root_dir: data/bair
-  classes_list: null
+  classes_list: data/bair.csv
   augmentation_param:
     flip_param:
       time_flip: False
@@ -66,7 +66,7 @@ schedule_params:
 
 loss_weights:
   reconstruction: [10, 10, 10, 10, 1]
-  reconstruction_deformed: [0, 0, 0, 0, 0]
+  reconstruction_deformed: [10, 0, 0, 0, 0]
   generator_gan: 1
   discriminator_gan: 1
 

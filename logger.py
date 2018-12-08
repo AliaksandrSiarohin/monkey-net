@@ -7,7 +7,6 @@ from skimage.draw import circle
 
 import matplotlib.pyplot as plt
 
-
 class Logger:
     def __init__(self, generator, log_dir, discriminator=None, optimizer_generator=None, kp_extractor=None,
                  optimizer_discriminator=None, optimizer_kp_extractor=None,log_file_name='log.txt', log_freq_iter=100, cpk_freq_epoch=1000, fill_counter=8):
@@ -139,18 +138,21 @@ class Visualizer:
         appearance_deformed_batch = out['video_deformed'].data.cpu().numpy()
         motion_video_batch = inp['first_video_array'].data.cpu().numpy()
         appearance_video_batch = inp['second_video_array'][:, :, 0:1].data.cpu().repeat(1, 1, out_video_batch.shape[2], 1, 1).numpy()
-
+        video_first_frame = inp['first_video_array'][:, :, 0:1].data.cpu().repeat(1, 1, out_video_batch.shape[2], 1, 1).numpy()
+    
         kp_video = out['kp_video']['mean'].data.cpu().numpy()
         kp_appearance = out['kp_appearance']['mean'].data.cpu().repeat(1, out_video_batch.shape[2], 1, 1).numpy()
         kp_norm = out['kp_norm']['mean'].data.cpu().numpy()
- 
+        kp_video_first = out['kp_video']['mean'][:, :1].data.cpu().repeat(1, out_video_batch.shape[2], 1, 1).numpy()
 
+ 
+        video_first_frame = np.transpose(video_first_frame, [0, 2, 3, 4, 1]) 
         out_video_batch = np.transpose(out_video_batch, [0, 2, 3, 4, 1])
         motion_video_batch = np.transpose(motion_video_batch, [0, 2, 3, 4, 1])
         appearance_video_batch = np.transpose(appearance_video_batch, [0, 2, 3, 4, 1])
         appearance_deformed_batch = np.transpose(appearance_deformed_batch, [0, 2, 3, 4, 1])
 
-        image = self.create_image_grid((appearance_video_batch, kp_appearance), (motion_video_batch, kp_video),
+        image = self.create_image_grid((appearance_video_batch, kp_appearance), (video_first_frame, kp_video_first), (motion_video_batch, kp_video),
                                        (out_video_batch, kp_norm), out_video_batch, appearance_deformed_batch)
         image = (255 * image).astype(np.uint8)
         return image
