@@ -22,6 +22,7 @@ transfer_params:
   move_location: False
   movement_mult: False
 
+
 model_params:
   detach_kp_generator: False
   detach_kp_discriminator: True
@@ -49,16 +50,19 @@ model_params:
         use_heatmap: True
         use_deformed_appearance: True
         heatmap_type: 'difference'
-      num_group_blocks: 2
+        norm_const: 1000
+      num_group_blocks: 0
     kp_embedding_params:
       use_heatmap: True
+      norm_const: 1000
       heatmap_type: 'difference'
   discriminator_params:
+    kp_embedding_params:
+      norm_const: 1000
     block_expansion: 32
-    use_kp: True
     max_features: 256
-    non_local_index: null
     num_blocks: 4
+
 
 schedule_params:
   num_epochs: [500, 250]

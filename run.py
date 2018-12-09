@@ -34,9 +34,7 @@ if __name__ == "__main__":
     with open(opt.config) as f:
         config = yaml.load(f)
         assert [len(v) == len(config['schedule_params']['num_epochs']) for k, v in config['schedule_params'].items()]
-
-        blocks_discriminator = config['model_params']['discriminator_params']['num_blocks'] +  \
-                               (config['model_params']['discriminator_params']['non_local_index'] is not None)
+        blocks_discriminator = config['model_params']['discriminator_params']['num_blocks']
         assert len(config['loss_weights']['reconstruction']) == blocks_discriminator + 1
 
     if opt.checkpoint is not None:

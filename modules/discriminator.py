@@ -30,43 +30,17 @@ class DownBlock3D(nn.Module):
         return out
 
 
-# class DownBlock3D(nn.Module):
-#     """
-#     Simple block for processing video (encoder).
-#     """
-#     def __init__(self, in_features, out_features, norm=False, pool=False, kernel_size=(1, 3, 3), padding=(0, 1, 1)):
-#         super(DownBlock3D, self).__init__()
-#         self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features, kernel_size=kernel_size, padding=padding)
-#         if norm:
-#             self.norm = nn.InstanceNorm3d(out_features, affine=True)
-#         else:
-#             self.norm = None
-#         if pool:
-#             self.pool = nn.AvgPool3d(kernel_size=(1, 2, 2))
-#         else:
-#             self.pool = None
-#
-#     def forward(self, x):
-#         out = self.conv(x)
-#         if self.norm:
-#             out = self.norm(out)
-#         out = F.leaky_relu(out, 0.2)
-#         if self.pool:
-#             out = self.pool(out)
-#         return out
-
-
 class Discriminator(nn.Module):
     """
     Extractor of keypoints. Return kp feature maps.
     """
     def __init__(self, num_channels=3, num_kp=10, kp_variance=0.01,
-                 block_expansion=64, num_blocks=4, max_features=512, use_kp=False, non_local_index=None):
+                 block_expansion=64, num_blocks=4, max_features=512, kp_embedding_params=None):
         super(Discriminator, self).__init__()
 
-        if use_kp:
+        if kp_embedding_params is not None:
             self.kp_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
-                                                       use_difference=False, use_deformed_appearance=False)
+                                                       **kp_embedding_params)
             embedding_channels = self.kp_embedding.out_channels
         else:
             self.kp_embedding = None
@@ -78,8 +52,6 @@ class Discriminator(nn.Module):
                                            min(max_features, block_expansion * (2 ** (i + 1))),
                                            norm=(i != 0),
                                            kernel_size=4))
-            if i == non_local_index:
-                down_blocks.append(NONLocalBlock3D(min(max_features, block_expansion * (2 ** (i + 1))), bn_layer=False))
 
         self.down_blocks = nn.ModuleList(down_blocks)
         self.conv = nn.Conv3d(self.down_blocks[-1].conv.out_channels, out_channels=1, kernel_size=1)
