@@ -14,41 +14,6 @@ pip install -r requirements.txt
 
 There several config (```dataset_name.yaml```) files one for each dataset. Check ```shapes.yaml``` for description of each individual parameter.
 
-
-### Datasets
-
-#### Shapes
-
-This dataset is saved along with repository. Training takes about 1 hour.
-
-#### Actions
-
-This dataset is also saved along with repository. And training takes about 5 hours.
-
-#### Nemo
-
-The preprocessed version of this dataset can be [downloaded](). Training takes about 6 hours.
-
-#### Taichi
-
-You should ask the permission to use the dataset from @sergeytulyakov. Training takes about 10 hours.
-
-#### Bair
-
-The preprocessed version of this dataset can be [downloaded](). Training takes about 4 hours.
-
-#### MGif
-
-The preprocessed version of this dataset can be [downloaded](). [Check for details on this dataset](sup-mat/MGif/README.md). Training takes about 20 hours, on 2 gpu.
-
-### Vox
-
-The dataset can be downloaded and preprocessed using a script.
-```
-cd data
-./get_vox.sh
-```
-
 ### Training
 
 In order to train a model on specific dataset run:
@@ -109,6 +74,28 @@ This will run a 3 steps:
 * Run a predictor for each video in the dataset, starting from the first frame.
 Again the ```prediction``` subfolder will be created in the same folder as a checkpoint.
 You can find generated video there and in ```png``` subfolder loss-less verstion in '.png' format.
+
+### Datasets
+
+1) **Shapes**. This dataset is saved along with repository. Training takes about 1 hour.
+
+2) **Actions**. This dataset is also saved along with repository. And training takes about 5 hours.
+
+3) **Nemo**. The preprocessed version of this dataset can be [downloaded](). Training takes about 6 hours.
+
+4) **Taichi**. You should ask the permission to use the dataset from @sergeytulyakov. Training takes about 10 hours.
+
+5) **Bair**. The preprocessed version of this dataset can be [downloaded](). Training takes about 4 hours.
+
+6) **MGif**. The preprocessed version of this dataset can be [downloaded](). [Check for details on this dataset](sup-mat/MGif/README.md). Training takes about 20 hours, on 2 gpu.
+
+7) **Vox**. The dataset can be downloaded and preprocessed using a script.
+```
+cd data
+./get_vox.sh
+```
+
+
 
 #### Additional notes
 
