@@ -1,7 +1,7 @@
 dataset_params:
   root_dir: data/nemo
   classes_list: data/nemo.csv
-  augmentation_param:
+  augmentation_params:
     flip_param:
       time_flip: True
       horizontal_flip: True

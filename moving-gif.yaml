@@ -2,7 +2,7 @@ dataset_params:
   root_dir: data/moving-gif-128
   classes_list: data/moving-gif.csv
   image_shape: [128, 128, 3]
-  augmentation_param:
+  augmentation_params:
     flip_param:
       horizontal_flip: True
     crop_param:

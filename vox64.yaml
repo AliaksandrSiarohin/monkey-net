@@ -2,7 +2,7 @@ dataset_params:
   root_dir: data/vox64
   classes_list: null
   image_shape: [64, 64, 3]
-  augmentation_param:
+  augmentation_params:
     flip_param:
       horizontal_flip: True
       time_flip: True
