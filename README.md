@@ -91,8 +91,7 @@ You can find generated video there and in ```png``` subfolder loss-less verstion
 
 7) **Vox**. The dataset can be downloaded and preprocessed using a script.
 ```
-cd data
-./get_vox.sh
+cd data; ./get_vox.sh
 ```
 
 
