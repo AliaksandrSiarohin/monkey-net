@@ -6,16 +6,10 @@ from torch.utils.data import DataLoader
 from logger import Logger
 from modules.losses import generator_loss, discriminator_loss, generator_loss_names, discriminator_loss_names
 
-import numpy as np
-from torch.autograd import Variable
-import warnings
-import gc
-from sync_batchnorm import DataParallelWithCallback
-from functools import reduce
+from torch.optim.lr_scheduler import MultiStepLR
 
-def set_optimizer_lr(optimizer, lr):
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+import numpy as np
+from sync_batchnorm import DataParallelWithCallback
 
 
 def split_kp(kp_joined, detach=False):
@@ -29,16 +23,21 @@ def split_kp(kp_joined, detach=False):
 
 
 class GeneratorFullModel(torch.nn.Module):
-    def __init__(self, kp_extractor, generator, discriminator, config):
+    """
+    Merge all generator related updates into single model for better multi-gpu usage
+    """
+
+    def __init__(self, kp_extractor, generator, discriminator, train_params):
         super(GeneratorFullModel, self).__init__()
         self.kp_extractor = kp_extractor
         self.generator = generator
         self.discriminator = discriminator
-        self.config = config
+        self.train_params = train_params
 
     def forward(self, x):
         kp_joined = self.kp_extractor(torch.cat([x['appearance_array'], x['video_array']], dim=2))
-        generated = self.generator(x['appearance_array'], **split_kp(kp_joined, self.config['model_params']['detach_kp_generator']))
+        generated = self.generator(x['appearance_array'],
+                                   **split_kp(kp_joined, self.train_params['detach_kp_generator']))
         video_prediction = generated['video_prediction']
         video_deformed = generated['video_deformed']
 
@@ -47,123 +46,109 @@ class GeneratorFullModel(torch.nn.Module):
         discriminator_maps_real = self.discriminator(x['video_array'], **kp_dict)
         generated.update(kp_dict)
 
-        if self.config['loss_weights']['reconstruction_deformed'] is not None:
-            if np.abs(self.config['loss_weights']['reconstruction_deformed'][1:]).sum() == 0:
-                        #Only reconstruction of deformed_video
-                discriminator_maps_deformed = [video_deformed] + [None] * (len(discriminator_maps_real) - 1)
-            else:
-                discriminator_maps_deformed = self.discriminator(video_deformed, **kp_dict)
-        else:
-            discriminator_maps_deformed = None
+        losses = generator_loss(discriminator_maps_generated=discriminator_maps_generated,
+                                discriminator_maps_real=discriminator_maps_real,
+                                video_deformed=video_deformed,
+                                loss_weights=self.train_params['loss_weights'])
 
+        return tuple(losses) + (generated, kp_joined)
 
-
-        loss = generator_loss(discriminator_maps_generated=discriminator_maps_generated,
-                                                         discriminator_maps_deformed=discriminator_maps_deformed,
-                                                         discriminator_maps_real=discriminator_maps_real,
-                                                         loss_weights=self.config['loss_weights'])
-
-        return  tuple(loss) + (generated, kp_joined)
- 
 
 class DiscriminatorFullModel(torch.nn.Module):
-    def __init__(self, kp_extractor, generator, discriminator, config):
-        super(DiscriminatorFullModel, self).__init__() 
+    """
+    Merge all generator related updates into single model for better multi-gpu usage
+    """
+
+    def __init__(self, kp_extractor, generator, discriminator, train_params):
+        super(DiscriminatorFullModel, self).__init__()
         self.kp_extractor = kp_extractor
         self.generator = generator
         self.discriminator = discriminator
-        self.config = config
+        self.train_params = train_params
 
     def forward(self, x, kp_joined, generated):
-        kp_dict = split_kp(kp_joined, self.config['model_params']['detach_kp_discriminator'])
+        kp_dict = split_kp(kp_joined, self.train_params['detach_kp_discriminator'])
         discriminator_maps_generated = self.discriminator(generated['video_prediction'].detach(), **kp_dict)
         discriminator_maps_real = self.discriminator(x['video_array'], **kp_dict)
         loss = discriminator_loss(discriminator_maps_generated=discriminator_maps_generated,
                                   discriminator_maps_real=discriminator_maps_real,
-                                  loss_weights=self.config['loss_weights'])
+                                  loss_weights=self.train_params['loss_weights'])
         return loss
 
 
-def train(config, generator, discriminator, kp_extractor, checkpoint, log_dir, dataset, device_ids):
-    start_epoch = 0
-    it = 0
+def train(config, generator, discriminator, kp_detector, checkpoint, log_dir, dataset, device_ids):
+    train_params = config['train_params']
 
-    optimizer_generator = torch.optim.Adam(generator.parameters(), betas=(0.5, 0.999))
-    optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), betas=(0.5, 0.999))
-    optimizer_kp_extractor = torch.optim.Adam(kp_extractor.parameters(), betas=(0.5, 0.999))
+    optimizer_generator = torch.optim.Adam(generator.parameters(), lr=train_params['lr'], betas=(0.5, 0.999))
+    optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=train_params['lr'], betas=(0.5, 0.999))
+    optimizer_kp_detector = torch.optim.Adam(kp_detector.parameters(), lr=train_params['lr'], betas=(0.5, 0.999))
 
     if checkpoint is not None:
-        start_epoch, it = Logger.load_cpk(checkpoint, generator, discriminator, kp_extractor,
-                                          optimizer_generator, optimizer_discriminator, optimizer_kp_extractor=None)
+        start_epoch, it = Logger.load_cpk(checkpoint, generator, discriminator, kp_detector,
+                                          optimizer_generator, optimizer_discriminator, optimizer_kp_detector)
+    else:
+        start_epoch = 0
+        it = 0
 
-    epochs_milestones = np.cumsum(config['schedule_params']['num_epochs'])
+    scheduler_generator = MultiStepLR(optimizer_generator, train_params['epoch_milestones'], gamma=0.1,
+                                      last_epoch=start_epoch - 1)
+    scheduler_discriminator = MultiStepLR(optimizer_generator, train_params['epoch_milestones'], gamma=0.1,
+                                          last_epoch=start_epoch - 1)
+    scheduler_kp_detector = MultiStepLR(optimizer_generator, train_params['epoch_milestones'], gamma=0.1,
+                                        last_epoch=start_epoch - 1)
 
-    schedule_iter = np.searchsorted(epochs_milestones, start_epoch)
-    dataloader = DataLoader(dataset, batch_size=config['schedule_params']['batch_size'][schedule_iter],
-                            shuffle=True, num_workers=4, drop_last=True)
-    set_optimizer_lr(optimizer_generator, config['schedule_params']['lr_generator'][schedule_iter])
-    set_optimizer_lr(optimizer_discriminator, config['schedule_params']['lr_discriminator'][schedule_iter])
-    set_optimizer_lr(optimizer_kp_extractor, config['schedule_params']['lr_kp_extractor'][schedule_iter])
+    dataloader = DataLoader(dataset, batch_size=train_params['batch_size'], shuffle=True, num_workers=4, drop_last=True)
 
-    dataset.set_number_of_frames_per_sample(config['schedule_params']['frames_per_sample'][schedule_iter])
+    generator_full = GeneratorFullModel(kp_detector, generator, discriminator, train_params)
+    discriminator_full = DiscriminatorFullModel(kp_detector, generator, discriminator, train_params)
 
-    generator_full = GeneratorFullModel(kp_extractor, generator, discriminator, config) 
-    discriminator_full = DiscriminatorFullModel(kp_extractor, generator, discriminator, config) 
- 
     generator_full_par = DataParallelWithCallback(generator_full, device_ids=device_ids)
     discriminator_full_par = DataParallelWithCallback(discriminator_full, device_ids=device_ids)
 
-    with Logger(generator=generator, discriminator=discriminator, kp_extractor=kp_extractor, optimizer_generator=optimizer_generator,
-                optimizer_discriminator=optimizer_discriminator, optimizer_kp_extractor=optimizer_kp_extractor,
-                log_dir=log_dir, **config['log_params']) as logger:
-        for epoch in trange(start_epoch, epochs_milestones[-1]):
+    with Logger(log_dir=log_dir, visualizer_params=config['visualizer_params'], **train_params['log_params']) as logger:
+        for epoch in trange(start_epoch, train_params['num_epochs']):
             for x in dataloader:
                 out = generator_full_par(x)
                 loss_values = out[:-2]
                 generated = out[-2]
                 kp_joined = out[-1]
                 loss_values = [val.mean() for val in loss_values]
-                generator_loss_values = [val.detach().cpu().numpy() for val in loss_values]
+                loss = sum(loss_values)
 
-                loss = sum(loss_values) 
-                loss.backward(retain_graph=not config['model_params']['detach_kp_discriminator'])               
+                loss.backward(retain_graph=not train_params['detach_kp_discriminator'])
                 optimizer_generator.step()
                 optimizer_generator.zero_grad()
                 optimizer_discriminator.zero_grad()
-                if config['model_params']['detach_kp_discriminator']:
-                    optimizer_kp_extractor.step()
-                    optimizer_kp_extractor.zero_grad()               
+                if train_params['detach_kp_discriminator']:
+                    optimizer_kp_detector.step()
+                    optimizer_kp_detector.zero_grad()
+
+                generator_loss_values = [val.detach().cpu().numpy() for val in loss_values]
 
                 loss_values = discriminator_full_par(x, kp_joined, generated)
-
                 loss_values = [val.mean() for val in loss_values]
-                discriminator_loss_values = [val.detach().cpu().numpy() for val in loss_values]
+                loss = sum(loss_values)
 
-                loss = sum(loss_values) 
                 loss.backward()
                 optimizer_discriminator.step()
                 optimizer_discriminator.zero_grad()
-                if not config['model_params']['detach_kp_discriminator']:
-                    optimizer_kp_extractor.step()
-                    optimizer_kp_extractor.zero_grad()
- 
-                logger.log_iter(it, names=generator_loss_names(config['loss_weights']) + discriminator_loss_names(),
+                if not train_params['detach_kp_discriminator']:
+                    optimizer_kp_detector.step()
+                    optimizer_kp_detector.zero_grad()
+
+                discriminator_loss_values = [val.detach().cpu().numpy() for val in loss_values]
+
+                logger.log_iter(it, names=generator_loss_names(train_params['loss_weights']) + discriminator_loss_names(),
                                 values=generator_loss_values + discriminator_loss_values, inp=x, out=generated)
                 it += 1
 
-            if epoch in epochs_milestones:
-                schedule_iter = np.searchsorted(epochs_milestones, epoch, side='right')
-                lr_generator = config['schedule_params']['lr_generator'][schedule_iter]
-                lr_discriminator = config['schedule_params']['lr_discriminator'][schedule_iter]
-                lr_kp_extractor = config['schedule_params']['lr_kp_extractor'][schedule_iter]
- 
-                bs = config['schedule_params']['batch_size'][schedule_iter]
-                frames_per_sample = config['schedule_params']['frames_per_sample'][schedule_iter]
-                print("Schedule step: lr - %s, bs - %s, frames_per_sample - %s" % ((lr_generator, lr_discriminator, lr_kp_extractor), bs, frames_per_sample))
-                dataloader = DataLoader(dataset, batch_size=bs, shuffle=True, num_workers=4)
-                set_optimizer_lr(optimizer_generator, lr_generator)
-                set_optimizer_lr(optimizer_discriminator, lr_discriminator)
-                set_optimizer_lr(optimizer_kp_extractor, lr_kp_extractor)
-                dataset.set_number_of_frames_per_sample(frames_per_sample)
+            scheduler_generator.step()
+            scheduler_discriminator.step()
+            scheduler_kp_detector.step()
 
-            logger.log_epoch(epoch)
+            logger.log_epoch(epoch, {'generator': generator,
+                                     'discriminator': discriminator,
+                                     'kp_detector': kp_detector,
+                                     'optimizer_generator': optimizer_generator,
+                                     'optimizer_discriminator': optimizer_discriminator,
+                                     'optimizer_kp_detector': optimizer_kp_detector})

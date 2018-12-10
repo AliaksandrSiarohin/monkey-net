@@ -1,15 +1,15 @@
 from torch import nn
 import torch
 import torch.nn.functional as F
-from modules.util import make_coordinate_grid, matrix_inverse
-from modules.kp_extractor import kp2gaussian
-from sync_batchnorm import SynchronizedBatchNorm3d as BatchNorm3d
+from modules.util import make_coordinate_grid
+from modules.keypoint_detector import kp2gaussian
 
 
 class MovementEmbeddingModule(nn.Module):
     """
-    Produce embedding for movement
+    Produce a keypoint representation that will be further used by other modules
     """
+
     def __init__(self, num_kp, kp_variance, num_channels, use_deformed_appearance=False, use_difference=False,
                  use_heatmap=True, add_bg_feature_map=False, heatmap_type='gaussian', norm_const=100):
         super(MovementEmbeddingModule, self).__init__()
@@ -18,7 +18,8 @@ class MovementEmbeddingModule(nn.Module):
 
         assert ((int(use_heatmap) + int(use_deformed_appearance) + int(use_difference)) >= 1)
 
-        self.out_channels = (1 * use_heatmap + 2 * use_difference + num_channels * use_deformed_appearance) * (num_kp + add_bg_feature_map)
+        self.out_channels = (1 * use_heatmap + 2 * use_difference + num_channels * use_deformed_appearance) * (
+        num_kp + add_bg_feature_map)
 
         self.kp_variance = kp_variance
         self.heatmap_type = heatmap_type
@@ -28,10 +29,14 @@ class MovementEmbeddingModule(nn.Module):
         self.add_bg_feature_map = add_bg_feature_map
         self.norm_const = norm_const
 
-
     def normalize_heatmap(self, heatmap):
-        return heatmap / self.norm_const
-
+        if self.norm_const == "sum":
+            heatmap_shape = heatmap.shape
+            heatmap = heatmap.view(heatmap_shape[0], heatmap_shape[1], heatmap_shape[2], -1)
+            heatmap = heatmap / heatmap.sum(dim=3, keepdim=True)
+            return heatmap.view(*heatmap_shape)
+        else:
+            return heatmap / self.norm_const
 
     def forward(self, appearance_frame, kp_video, kp_appearance):
         spatial_size = appearance_frame.shape[3:]
@@ -41,9 +46,11 @@ class MovementEmbeddingModule(nn.Module):
 
         inputs = []
         if self.use_heatmap:
-            heatmap = self.normalize_heatmap(kp2gaussian(kp_video, spatial_size=spatial_size, kp_variance=self.kp_variance))
+            heatmap = self.normalize_heatmap(
+                kp2gaussian(kp_video, spatial_size=spatial_size, kp_variance=self.kp_variance))
             if self.heatmap_type == 'difference':
-                heatmap_appearance = self.normalize_heatmap(kp2gaussian(kp_appearance, spatial_size=spatial_size, kp_variance=self.kp_variance))
+                heatmap_appearance = self.normalize_heatmap(
+                    kp2gaussian(kp_appearance, spatial_size=spatial_size, kp_variance=self.kp_variance))
                 heatmap = heatmap - heatmap_appearance
             if self.add_bg_feature_map:
                 zeros = torch.zeros(bs, d, 1, h, w).type(heatmap.type())

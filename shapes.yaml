@@ -1,33 +1,20 @@
 dataset_params:
-  image_shape: [64, 64, 3]
   root_dir: data/shapes
-  augmentation_param:
+  classes_list: null
+  augmentation_params:
     flip_param:
       time_flip: True
       horizontal_flip: True
-    select_frames_param:
-      consequent: False
     crop_param:
       size: [64, 64]
 
-log_params:
-  log_freq_iter: 200
-  cpk_freq_epoch: 10
-
-transfer_params:
-  num_pairs: 100
-  format: '.gif'
-  move_location: False
-  movement_mult: False
 
 model_params:
-  detach_kp_generator: False
-  detach_kp_discriminator: True
   common_params:
     num_kp: 4
     kp_variance: 'matrix'
     num_channels: 3
-  kp_extractor_params:
+  kp_detector_params:
      temperature: 0.1
      block_expansion: 16
      max_features: 128
@@ -36,52 +23,72 @@ model_params:
     block_expansion: 16
     max_features: 128
     num_blocks: 5
-    num_refinement_blocks: 2
-    deformation_module_params:
+    num_refinement_blocks: 4
+    dense_motion_params:
       block_expansion: 16
       max_features: 128
-      num_blocks: 3
+      num_blocks: 5
       use_mask: True
       use_correction: True
       mask_embedding_params:
         use_heatmap: True
         use_deformed_appearance: True
         heatmap_type: 'difference'
-      num_group_blocks: 2
+        norm_const: 10
     kp_embedding_params:
       use_heatmap: True
+      norm_const: 10
       heatmap_type: 'difference'
   discriminator_params:
+    kp_embedding_params:
+      norm_const: 10
     block_expansion: 32
-    use_kp: True
-    max_features: 128
-    non_local_index: null
-    num_blocks: 3
+    max_features: 256
+    num_blocks: 4
 
-schedule_params:
-  num_epochs: [4, 4]
-  frames_per_sample: [1, 1]
-  lr_generator: [2.0e-4, 2.0e-5]
-  lr_discriminator: [2.0e-4, 2.0e-5]
-  lr_kp_extractor: [2.0e-4, 2.0e-5]
-  batch_size: [16, 16]
 
-loss_weights:
-  reconstruction: [10, 10, 10 , 10]
-  reconstruction_deformed: [0, 0, 0, 0]
-  generator_gan: 1
-  discriminator_gan: 1
+train_params:
+  detach_kp_generator: False
+  detach_kp_discriminator: True
+  num_epochs: 8
+  epoch_milestones: [4]
+  lr: 2.0e-4
+  batch_size: 16
+  loss_weights:
+    reconstruction: [10, 10, 10, 10, 1]
+    reconstruction_deformed: 0
+    generator_gan: 1
+    discriminator_gan: 1
+  log_params:
+    log_freq_iter: 200
+    cpk_freq_epoch: 10
 
+reconstruction_params:
+  num_videos: 10
+  format: '.gif'
+
+transfer_params:
+  num_pairs: 100
+  format: '.gif'
+  normalization_params:
+    movement_mult: False
+    move_location: True
+    adapt_variance: False
 
 prediction_params:
-  module_params:
-     num_kp: 4
-     kp_variance: 'matrix'
+  rnn_params:
      num_features: 1024
      num_layers: 1
      dropout: 0
-  num_epochs: 1000
+  num_epochs: 100
   lr: 0.001
-  bs: 256
+  batch_size: 256
   num_frames: 32
   init_frames: 1
+  train_size: 50
+  format: '.gif'
+
+visualizer_params:
+  kp_size: 2
+  draw_border: True
+  colormap: 'gist_rainbow'

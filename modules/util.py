@@ -6,15 +6,16 @@ import torch
 import numpy as np
 from sync_batchnorm import SynchronizedBatchNorm3d as BatchNorm3d
 
+
 def compute_image_gradient(image, padding=0):
     bs, c, h, w = image.shape
 
-    sobel_x = torch.from_numpy(np.array([[1, 0, -1],[2,0,-2],[1,0,-1]])).type(image.type())
+    sobel_x = torch.from_numpy(np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])).type(image.type())
     filter = sobel_x.unsqueeze(0).repeat(c, 1, 1, 1)
     grad_x = F.conv2d(image, filter, groups=c, padding=padding)
     grad_x = grad_x
 
-    sobel_y = torch.from_numpy(np.array([[1, 2, 1],[0,0,0],[-1,-2,-1]])).type(image.type())
+    sobel_y = torch.from_numpy(np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])).type(image.type())
     filter = sobel_y.unsqueeze(0).repeat(c, 1, 1, 1)
     grad_y = F.conv2d(image, filter, groups=c, padding=padding)
     grad_y = grad_y
@@ -23,6 +24,9 @@ def compute_image_gradient(image, padding=0):
 
 
 def make_coordinate_grid(spatial_size, type):
+    """
+    Create a meshgrid [-1,1] x [-1,1] of given spatial_size.
+    """
     h, w = spatial_size
     x = torch.arange(w).type(type)
     y = torch.arange(h).type(type)
@@ -42,10 +46,13 @@ class ResBlock3D(nn.Module):
     """
     Res block, preserve spatial resolution.
     """
+
     def __init__(self, in_features, kernel_size, padding):
         super(ResBlock3D, self).__init__()
-        self.conv1 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=kernel_size, padding=padding)
-        self.conv2 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=kernel_size, padding=padding)
+        self.conv1 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=kernel_size,
+                               padding=padding)
+        self.conv2 = nn.Conv3d(in_channels=in_features, out_channels=in_features, kernel_size=kernel_size,
+                               padding=padding)
         self.norm1 = BatchNorm3d(in_features, affine=True)
         self.norm2 = BatchNorm3d(in_features, affine=True)
 
@@ -65,10 +72,12 @@ class UpBlock3D(nn.Module):
     """
     Simple block for processing video (decoder).
     """
+
     def __init__(self, in_features, out_features, kernel_size=3, padding=1):
         super(UpBlock3D, self).__init__()
 
-        self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features, kernel_size=kernel_size, padding=padding)
+        self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features, kernel_size=kernel_size,
+                              padding=padding)
         self.norm = BatchNorm3d(out_features, affine=True)
 
     def forward(self, x):
@@ -83,9 +92,11 @@ class DownBlock3D(nn.Module):
     """
     Simple block for processing video (encoder).
     """
+
     def __init__(self, in_features, out_features, kernel_size=3, padding=1):
         super(DownBlock3D, self).__init__()
-        self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features, kernel_size=kernel_size, padding=padding)
+        self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features, kernel_size=kernel_size,
+                              padding=padding)
         self.norm = BatchNorm3d(out_features, affine=True)
         self.pool = nn.AvgPool3d(kernel_size=(1, 2, 2))
 
@@ -101,6 +112,7 @@ class SameBlock3D(nn.Module):
     """
     Simple block with group convolution.
     """
+
     def __init__(self, in_features, out_features, groups=None, kernel_size=3, padding=1):
         super(SameBlock3D, self).__init__()
         self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features,
@@ -118,13 +130,14 @@ class Encoder(nn.Module):
     """
     Hourglass Encoder
     """
-    def __init__(self, block_expansion, in_features, num_blocks=3, max_features=256, dim=2):
+
+    def __init__(self, block_expansion, in_features, num_blocks=3, max_features=256, temporal=False):
         super(Encoder, self).__init__()
 
         down_blocks = []
 
-        kernel_size = (3, 3, 3) if dim == 3 else (1, 3, 3)
-        padding = (1, 1, 1) if dim == 3 else (0, 1, 1)
+        kernel_size = (3, 3, 3) if temporal else (1, 3, 3)
+        padding = (1, 1, 1) if temporal else (0, 1, 1)
         for i in range(num_blocks):
             down_blocks.append(DownBlock3D(in_features if i == 0 else min(max_features, block_expansion * (2 ** i)),
                                            min(max_features, block_expansion * (2 ** (i + 1))),
@@ -143,16 +156,18 @@ class Decoder(nn.Module):
     """
     Hourglass Decoder
     """
-    def __init__(self, block_expansion, in_features, out_features, num_blocks=3, max_features=256, dim=2,
+
+    def __init__(self, block_expansion, in_features, out_features, num_blocks=3, max_features=256, temporal=False,
                  additional_features_for_block=0, use_last_conv=True):
         super(Decoder, self).__init__()
-        kernel_size = (3, 3, 3) if dim == 3 else (1, 3, 3)
-        padding = (1, 1, 1) if dim == 3 else (0, 1, 1)
+        kernel_size = (3, 3, 3) if temporal else (1, 3, 3)
+        padding = (1, 1, 1) if temporal else (0, 1, 1)
 
         up_blocks = []
 
         for i in range(num_blocks)[::-1]:
-            up_blocks.append(UpBlock3D((1 if i == num_blocks - 1 else 2) * min(max_features, block_expansion * (2 ** (i + 1))) + additional_features_for_block,
+            up_blocks.append(UpBlock3D((1 if i == num_blocks - 1 else 2) * min(max_features, block_expansion * (
+                2 ** (i + 1))) + additional_features_for_block,
                                        min(max_features, block_expansion * (2 ** i)),
                                        kernel_size=kernel_size, padding=padding))
 
@@ -178,10 +193,11 @@ class Hourglass(nn.Module):
     """
     Hourglass architecture.
     """
-    def __init__(self, block_expansion, in_features, out_features, num_blocks=3, max_features=256, dim=2):
+
+    def __init__(self, block_expansion, in_features, out_features, num_blocks=3, max_features=256, temporal=False, ):
         super(Hourglass, self).__init__()
-        self.encoder = Encoder(block_expansion, in_features, num_blocks, max_features, dim)
-        self.decoder = Decoder(block_expansion, in_features, out_features, num_blocks, max_features, dim)
+        self.encoder = Encoder(block_expansion, in_features, num_blocks, max_features, temporal=temporal)
+        self.decoder = Decoder(block_expansion, in_features, out_features, num_blocks, max_features, temporal=temporal)
 
     def forward(self, x):
         return self.decoder(self.encoder(x))
@@ -192,6 +208,7 @@ def matrix_inverse(batch_of_matrix):
     eye = b_mat.new_ones(b_mat.size(-1)).diag().expand_as(b_mat)
     b_inv, _ = torch.gesv(eye, b_mat)
     return b_inv
+
 
 def matrix_det(batch_of_matrix):
     a = batch_of_matrix[..., 0, 0].unsqueeze(-1)

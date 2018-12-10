@@ -1,20 +1,23 @@
 from torch import nn
 import torch.nn.functional as F
 import torch
-from modules.util import Hourglass, make_coordinate_grid, Encoder, SameBlock3D
+from modules.util import Hourglass, make_coordinate_grid, SameBlock3D
 from modules.movement_embedding import MovementEmbeddingModule
 
 
-class DeformationModule(nn.Module):
+class DenseMotionModule(nn.Module):
     """
-    Deformation module, predict deformation, that will be applied to skip connections.
+    Module that predicting a dense optical flow only from the displacement of a keypoints
+    and the appearance of the first frame
     """
+
     def __init__(self, block_expansion, num_blocks, max_features, mask_embedding_params, num_kp,
-                 num_channels, kp_variance, num_group_blocks, use_correction, use_mask, bg_init=2):
-        super(DeformationModule, self).__init__()
+                 num_channels, kp_variance, use_correction, use_mask, bg_init=2, num_group_blocks=0):
+        super(DenseMotionModule, self).__init__()
         self.mask_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
                                                       add_bg_feature_map=True, **mask_embedding_params)
-        self.difference_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
+        self.difference_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance,
+                                                            num_channels=num_channels,
                                                             add_bg_feature_map=True, use_difference=True,
                                                             use_heatmap=False, use_deformed_appearance=False)
 
@@ -26,7 +29,7 @@ class DeformationModule(nn.Module):
 
         self.hourglass = Hourglass(block_expansion=block_expansion, in_features=self.mask_embedding.out_channels,
                                    out_features=(num_kp + 1) * use_mask + 2 * use_correction,
-                                   max_features=max_features, dim=2, num_blocks=num_blocks)
+                                   max_features=max_features, num_blocks=num_blocks)
         self.hourglass.decoder.conv.weight.data.zero_()
         bias_init = ([bg_init] + [0] * num_kp) * use_mask + [0, 0] * use_correction
         self.hourglass.decoder.conv.bias.data.copy_(torch.tensor(bias_init, dtype=torch.float))
@@ -41,6 +44,7 @@ class DeformationModule(nn.Module):
             prediction = block(prediction)
             prediction = F.leaky_relu(prediction, 0.2)
         prediction = self.hourglass(prediction)
+
         bs, _, d, h, w = prediction.shape
         if self.use_mask:
             mask = prediction[:, :(self.num_kp + 1)]
@@ -63,10 +67,9 @@ class DeformationModule(nn.Module):
         coordinate_grid = make_coordinate_grid((h, w), type=deformations_relative.type())
         coordinate_grid = coordinate_grid.view(1, 1, h, w, 2)
         deformation = deformations_relative + coordinate_grid
-        z_coordinate = torch.zeros(deformation.shape[:-1] + (1, )).type(deformation.type())
+        z_coordinate = torch.zeros(deformation.shape[:-1] + (1,)).type(deformation.type())
 
         return torch.cat([deformation, z_coordinate], dim=-1)
-
 
 
 class IdentityDeformation(nn.Module):
@@ -76,5 +79,5 @@ class IdentityDeformation(nn.Module):
         coordinate_grid = make_coordinate_grid((h, w), type=appearance_frame.type())
         coordinate_grid = coordinate_grid.view(1, 1, h, w, 2).repeat(bs, d, 1, 1, 1)
 
-        z_coordinate = torch.zeros(coordinate_grid.shape[:-1] + (1, )).type(coordinate_grid.type())
+        z_coordinate = torch.zeros(coordinate_grid.shape[:-1] + (1,)).type(coordinate_grid.type())
         return torch.cat([coordinate_grid, z_coordinate], dim=-1)

@@ -4,8 +4,9 @@ import torch
 
 class PredictionModule(nn.Module):
     """
-    Extractor of keypoints. Return kp feature maps.
+    RNN for predicting kp movement
     """
+
     def __init__(self, num_kp=10, kp_variance=0.01, num_features=1024, num_layers=1, dropout=0.5):
         super(PredictionModule, self).__init__()
 
@@ -31,13 +32,6 @@ class PredictionModule(nn.Module):
         input = torch.cat(inputs, dim=-1)
 
         output, h = self.net(input)
-        # outputs = [output]
-        #
-        # for i in range(predict_forward):
-        #     output, h = self.net(output[:, -1:], h)
-        #     outputs.append(output)
-        #
-        # output = torch.cat(outputs, dim=1)
         output = output.view(bs, d, num_kp, -1)
         mean = torch.tanh(output[:, :, :, :2])
         kp_array = {'mean': mean}

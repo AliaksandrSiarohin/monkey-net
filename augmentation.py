@@ -16,6 +16,7 @@ import warnings
 
 from skimage import img_as_ubyte, img_as_float
 
+
 def crop_clip(clip, min_h, min_w, h, w):
     if isinstance(clip[0], np.ndarray):
         cropped = [img[min_h:min_h + h, min_w:min_w + w, :] for img in clip]
@@ -23,7 +24,7 @@ def crop_clip(clip, min_h, min_w, h, w):
     elif isinstance(clip[0], PIL.Image.Image):
         cropped = [
             img.crop((min_w, min_h, min_w + w, min_h + h)) for img in clip
-        ]
+            ]
     else:
         raise TypeError('Expected numpy.ndarray or PIL.Image' +
                         'but got list of {0}'.format(type(clip[0])))
@@ -32,11 +33,10 @@ def crop_clip(clip, min_h, min_w, h, w):
 
 def pad_clip(clip, h, w):
     im_h, im_w = clip[0].shape[:2]
-    pad_h = (0,0) if h < im_h else ((h - im_h) // 2, (h - im_h + 1) // 2)
-    pad_w = (0,0) if w < im_w else ((w - im_w) // 2, (w - im_w + 1) // 2)
+    pad_h = (0, 0) if h < im_h else ((h - im_h) // 2, (h - im_h + 1) // 2)
+    pad_w = (0, 0) if w < im_w else ((w - im_w) // 2, (w - im_w + 1) // 2)
 
     return pad(clip, ((0, 0), pad_h, pad_w, (0, 0)), mode='edge')
-
 
 
 def resize_clip(clip, size, interpolation='bilinear'):
@@ -55,7 +55,7 @@ def resize_clip(clip, size, interpolation='bilinear'):
         scaled = [
             resize(img, size, order=1 if interpolation == 'bilinear' else 0, preserve_range=True,
                    mode='constant', anti_aliasing=True) for img in clip
-        ]
+            ]
     elif isinstance(clip[0], PIL.Image.Image):
         if isinstance(size, numbers.Number):
             im_w, im_h = clip[0].size
@@ -98,7 +98,7 @@ class RandomFlip(object):
             return clip[::-1]
         if random.random() < 0.5 and self.horizontal_flip:
             return [np.fliplr(img) for img in clip]
- 
+
         return clip
 
 
@@ -280,7 +280,8 @@ class ColorJitter(object):
             if contrast is not None:
                 img_transforms.append(lambda img: torchvision.transforms.functional.adjust_contrast(img, contrast))
             random.shuffle(img_transforms)
-            img_transforms = [img_as_ubyte, torchvision.transforms.ToPILImage()] + img_transforms + [np.array, img_as_float]
+            img_transforms = [img_as_ubyte, torchvision.transforms.ToPILImage()] + img_transforms + [np.array,
+                                                                                                     img_as_float]
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -357,6 +358,7 @@ class SplitVideoAppearance(object):
 
 class VideoToTensor(object):
     """Convert video array to Tensor."""
+
     def __call__(self, video_array):
         video_array = np.array(video_array, dtype='float32')
         return {'video_array': video_array.transpose((3, 0, 1, 2))}
@@ -393,4 +395,3 @@ class AllAugmentationTransform:
         for t in self.transforms:
             clip = t(clip)
         return clip
-

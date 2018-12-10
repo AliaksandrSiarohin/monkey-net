@@ -8,14 +8,13 @@ from imageio import mimread
 import numpy as np
 from torch.utils.data import Dataset
 import pandas as pd
-from itertools import combinations
 
 from augmentation import AllAugmentationTransform, VideoToTensor
 
 
 class FramesDataset(Dataset):
-    """Dataset of videos, represented as image of consequent frames"""
-    def __init__(self, root_dir, augmentation_param, image_shape=(64, 64, 3), is_train=True,
+    """Dataset of videos, videos can be represented as an image of concatenated frames, or in '.mp4','.gif' format"""
+    def __init__(self, root_dir, augmentation_params, image_shape=(64, 64, 3), is_train=True,
                  random_seed=0, classes_list=None, transform=None):
         self.root_dir = root_dir
         self.images = os.listdir(root_dir)
@@ -39,7 +38,7 @@ class FramesDataset(Dataset):
 
         if transform is None:
             if is_train:
-                self.transform = AllAugmentationTransform(**augmentation_param)
+                self.transform = AllAugmentationTransform(**augmentation_params)
             else:
                 self.transform = VideoToTensor()
         else:
@@ -76,7 +75,7 @@ class FramesDataset(Dataset):
                 video = video[..., :3]
             video_array = img_as_float32(video)
         else:
-            warnings.warn("Unknown file extensions  %s" % img_name, Warning)
+            raise Exception("Unknown file extensions  %s" % img_name)
 
         out = self.transform(video_array)
         #add names
@@ -87,7 +86,7 @@ class FramesDataset(Dataset):
 
 class PairedDataset(Dataset):
     """
-    Dataset of pairs.
+    Dataset of pairs for transfer.
     """
     def __init__(self, initial_dataset, number_of_pairs, seed=0):
         self.initial_dataset = initial_dataset

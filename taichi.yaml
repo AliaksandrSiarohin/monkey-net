@@ -8,26 +8,12 @@ dataset_params:
     crop_param:
       size: [64, 64]
 
-log_params:
-  log_freq_iter: 200
-  cpk_freq_epoch: 1000
-
-
-transfer_params:
-  num_pairs: 300
-  format: '.gif'
-  movement_mult: False
-  move_location: True
-
-
 model_params:
-  detach_kp_generator: False
-  detach_kp_discriminator: True
   common_params:
     num_kp: 10
     kp_variance: 'matrix'
     num_channels: 3
-  kp_extractor_params:
+  kp_detector_params:
      temperature: 0.1
      block_expansion: 32
      max_features: 512
@@ -37,7 +23,7 @@ model_params:
     max_features: 512
     num_blocks: 5
     num_refinement_blocks: 4
-    deformation_module_params:
+    dense_motion_params:
       block_expansion: 32
       max_features: 512
       num_blocks: 5
@@ -47,45 +33,62 @@ model_params:
         use_heatmap: True
         use_deformed_appearance: True
         heatmap_type: 'difference'
-        norm_const: 100
-      num_group_blocks: 0
+        norm_const: 1000
+      num_group_blocks: 2
     kp_embedding_params:
       use_heatmap: True
-      norm_const: 100
+      norm_const: 1000
       heatmap_type: 'difference'
   discriminator_params:
     kp_embedding_params:
-      norm_const: 100
+      norm_const: 1000
     block_expansion: 32
     max_features: 256
     num_blocks: 4
 
+train_params:
+  detach_kp_generator: False
+  detach_kp_discriminator: True
+  num_epochs: 375
+  epoch_milestones: [250]
+  lr: 2.0e-4
+  batch_size: 32
+  loss_weights:
+    reconstruction: [10, 10, 10, 10, 1]
+    reconstruction_deformed: 0
+    generator_gan: 1
+    discriminator_gan: 1
+  log_params:
+    log_freq_iter: 200
+    cpk_freq_epoch: 10
 
-schedule_params:
-  num_epochs: [250, 125]
-  frames_per_sample: [1, 1]
-  lr_generator: [2.0e-4, 2.0e-5]
-  lr_discriminator: [2.0e-4, 2.0e-5]
-  lr_kp_extractor: [2.0e-4, 2.0e-5]
-  batch_size: [32, 32]
+reconstruction_params:
+  num_images: null
+  format: '.gif'
 
-loss_weights:
-  reconstruction: [10, 10, 10, 10, 1]
-  reconstruction_deformed: [0, 0, 0, 0, 0]
-  generator_gan: 1
-  discriminator_gan: 1
+transfer_params:
+  num_pairs: 100
+  format: '.gif'
+  normalization_params:
+    movement_mult: False
+    move_location: True
+    adapt_variance: False
 
 prediction_params:
-  module_params:
-     num_kp: 10
-     kp_variance: 'matrix'
+  rnn_params:
      num_features: 1024
      num_layers: 1
      dropout: 0
   num_epochs: 1000
   lr: 0.001
-  bs: 256
+  batch_size: 256
   num_frames: 32
   init_frames: 1
-  train_size: -1
+  train_size: 5000
   format: '.gif'
+
+visualizer_params:
+  kp_size: 2
+  draw_border: False
+  colormap: 'gist_rainbow'
+

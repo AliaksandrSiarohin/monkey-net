@@ -1,16 +1,19 @@
 from torch import nn
 import torch
 import torch.nn.functional as F
-from modules.util import Hourglass, make_coordinate_grid, matrix_inverse, matrix_det
-import numpy as np
+from modules.util import Hourglass, make_coordinate_grid, matrix_inverse
+
 
 def kp2gaussian(kp, spatial_size, kp_variance='matrix'):
+    """
+    Transform a keypoint into gaussian like representation
+    """
     mean = kp['mean']
 
     coordinate_grid = make_coordinate_grid(spatial_size, mean.type())
 
     number_of_leading_dimensions = len(mean.shape) - 1
-    shape = (1, ) * number_of_leading_dimensions + coordinate_grid.shape
+    shape = (1,) * number_of_leading_dimensions + coordinate_grid.shape
 
     coordinate_grid = coordinate_grid.view(*shape)
     repeats = mean.shape[:number_of_leading_dimensions] + (1, 1, 1)
@@ -34,17 +37,13 @@ def kp2gaussian(kp, spatial_size, kp_variance='matrix'):
     else:
         out = torch.exp(-0.5 * (mean_sub ** 2).sum(-1) / kp_variance)
 
-#    out_shape = out.shape
-#    out = out.view(out_shape[0], out_shape[1], out_shape[2], -1)    
-#    heatmap = out / out.max(dim=3, keepdim=True)[0]
-#    heatmap[torch.isnan(heatmap)] = 0
-#    out = heatmap.view(*out_shape)
-     
-#    out = out / 10
     return out
 
 
 def gaussian2kp(heatmap, kp_variance='matrix'):
+    """
+    Extract the mean and the variance from a heatmap
+    """
     shape = heatmap.shape
     heatmap = heatmap.unsqueeze(-1)
     grid = make_coordinate_grid(shape[3:], heatmap.type()).unsqueeze_(0).unsqueeze_(0).unsqueeze_(0)
@@ -60,7 +59,7 @@ def gaussian2kp(heatmap, kp_variance='matrix'):
         var = var.sum(dim=(3, 4))
         var = var.permute(0, 2, 1, 3, 4)
         kp['var'] = var
-        
+
     elif kp_variance == 'single':
         mean_sub = grid - mean.unsqueeze(-2).unsqueeze(-2)
         var = mean_sub ** 2
@@ -74,16 +73,17 @@ def gaussian2kp(heatmap, kp_variance='matrix'):
     return kp
 
 
-class KPExtractor(nn.Module):
+class KPDetector(nn.Module):
     """
-    Extractor of keypoints. Return kp feature maps.
+    Detecting a keypoints. Return keypoint position and variance.
     """
+
     def __init__(self, block_expansion, num_kp, num_channels, max_features, num_blocks, temperature,
                  kp_variance):
-        super(KPExtractor, self).__init__()
+        super(KPDetector, self).__init__()
 
         self.predictor = Hourglass(block_expansion, in_features=num_channels, out_features=num_kp,
-                                   max_features=max_features, num_blocks=num_blocks, dim=2)
+                                   max_features=max_features, num_blocks=num_blocks)
         self.temperature = temperature
         self.kp_variance = kp_variance
 
@@ -125,13 +125,13 @@ if __name__ == "__main__":
     mean_kp = torch.from_numpy(kp_array)
     var_kp = torch.from_numpy(kp_var)
 
-    out = kp2gaussian({'mean' : mean_kp, 'var': var_kp}, (128, 128), kp_variance=0.01)#'single')
+    out = kp2gaussian({'mean': mean_kp, 'var': var_kp}, (128, 128), kp_variance=0.01)  # 'single')
 
     kp = gaussian2kp(out, kp_variance='single')
 
-    print (kp['var'].shape)
-    print (kp['mean'][0])
-    print (kp['var'][0])
+    print(kp['var'].shape)
+    print(kp['mean'][0])
+    print(kp['var'][0])
 
     out = out.numpy()
 

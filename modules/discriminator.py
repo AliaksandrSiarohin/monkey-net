@@ -2,19 +2,20 @@ from torch import nn
 import torch.nn.functional as F
 import torch
 from modules.movement_embedding import MovementEmbeddingModule
-from modules.non_local import NONLocalBlock3D
 
 
 class DownBlock3D(nn.Module):
     """
     Simple block for processing video (encoder).
     """
+
     def __init__(self, in_features, out_features, norm=False, kernel_size=4):
         super(DownBlock3D, self).__init__()
         ka = kernel_size // 2
         kb = ka - 1 if kernel_size % 2 == 0 else ka
 
-        self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features, kernel_size=(1, kernel_size, kernel_size))
+        self.conv = nn.Conv3d(in_channels=in_features, out_channels=out_features,
+                              kernel_size=(1, kernel_size, kernel_size))
         if norm:
             self.norm = nn.InstanceNorm3d(out_features, affine=True)
         else:
@@ -32,15 +33,17 @@ class DownBlock3D(nn.Module):
 
 class Discriminator(nn.Module):
     """
-    Extractor of keypoints. Return kp feature maps.
+    Discriminator similar to Pix2Pix
     """
+
     def __init__(self, num_channels=3, num_kp=10, kp_variance=0.01,
                  block_expansion=64, num_blocks=4, max_features=512, kp_embedding_params=None):
         super(Discriminator, self).__init__()
 
         if kp_embedding_params is not None:
-            self.kp_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
-                                                       **kp_embedding_params)
+            self.kp_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance,
+                                                        num_channels=num_channels,
+                                                        **kp_embedding_params)
             embedding_channels = self.kp_embedding.out_channels
         else:
             self.kp_embedding = None
@@ -48,10 +51,11 @@ class Discriminator(nn.Module):
 
         down_blocks = []
         for i in range(num_blocks):
-            down_blocks.append(DownBlock3D(num_channels + embedding_channels if i == 0 else min(max_features, block_expansion * (2 ** i)),
-                                           min(max_features, block_expansion * (2 ** (i + 1))),
-                                           norm=(i != 0),
-                                           kernel_size=4))
+            down_blocks.append(DownBlock3D(
+                num_channels + embedding_channels if i == 0 else min(max_features, block_expansion * (2 ** i)),
+                min(max_features, block_expansion * (2 ** (i + 1))),
+                norm=(i != 0),
+                kernel_size=4))
 
         self.down_blocks = nn.ModuleList(down_blocks)
         self.conv = nn.Conv3d(self.down_blocks[-1].conv.out_channels, out_channels=1, kernel_size=1)

@@ -1,16 +1,13 @@
 dataset_params:
-  root_dir: data/moving-gif-128
-  classes_list: data/moving-gif.csv
-  image_shape: [128, 128, 3]
+  root_dir: data/vox64
+  classes_list: null
+  image_shape: [64, 64, 3]
   augmentation_param:
     flip_param:
       horizontal_flip: True
+      time_flip: True
     crop_param:
-      size: [128, 128]
-    resize_param:
-      ratio: [0.9, 1.1]
-    jitter_param:
-      hue: 0.5
+      size: [64, 64]
 
 model_params:
   common_params:
@@ -20,17 +17,17 @@ model_params:
   kp_detector_params:
      temperature: 0.1
      block_expansion: 32
-     max_features: 1024
-     num_blocks: 6
+     max_features: 512
+     num_blocks: 5
   generator_params:
     block_expansion: 32
-    max_features: 1024
-    num_blocks: 6
+    max_features: 512
+    num_blocks: 5
     num_refinement_blocks: 4
     dense_motion_params:
       block_expansion: 32
-      max_features: 1024
-      num_blocks: 6
+      max_features: 512
+      num_blocks: 5
       use_mask: True
       use_correction: True
       mask_embedding_params:
@@ -53,8 +50,8 @@ model_params:
 train_params:
   detach_kp_generator: False
   detach_kp_discriminator: True
-  num_epochs: 750
-  epoch_milestones: [500]
+  num_epochs: 15
+  epoch_milestones: [10]
   lr: 2.0e-4
   batch_size: 32
   loss_weights:
@@ -95,4 +92,3 @@ visualizer_params:
   kp_size: 2
   draw_border: False
   colormap: 'gist_rainbow'
-
