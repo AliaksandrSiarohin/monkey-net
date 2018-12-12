@@ -10,7 +10,7 @@ dataset_params:
 
 model_params:
   common_params:
-    num_kp: 10
+    num_kp: 5
     kp_variance: 'matrix'
     num_channels: 3
   kp_detector_params:
@@ -60,10 +60,10 @@ train_params:
     discriminator_gan: 1
   log_params:
     log_freq_iter: 200
-    cpk_freq_epoch: 10
+    cpk_freq_epoch: 250
 
 reconstruction_params:
-  num_images: null
+  num_videos: null
   format: '.gif'
 
 transfer_params:

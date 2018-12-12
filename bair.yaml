@@ -55,7 +55,7 @@ train_params:
   batch_size: 32
   loss_weights:
     reconstruction: [10, 10, 10, 10, 1]
-    reconstruction_deformed: 0
+    reconstruction_deformed: 10
     generator_gan: 1
     discriminator_gan: 1
   log_params:
@@ -63,7 +63,7 @@ train_params:
     cpk_freq_epoch: 10
 
 reconstruction_params:
-  num_images: null
+  num_videos: null
   format: '.gif'
 
 transfer_params:

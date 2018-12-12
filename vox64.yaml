@@ -1,5 +1,5 @@
 dataset_params:
-  root_dir: data/vox64
+  root_dir: data/vox-64
   classes_list: null
   image_shape: [64, 64, 3]
   augmentation_params:
@@ -64,7 +64,7 @@ train_params:
     cpk_freq_epoch: 10
 
 reconstruction_params:
-  num_images: null
+  num_videos: null
   format: '.gif'
 
 transfer_params:
