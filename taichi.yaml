@@ -60,10 +60,10 @@ train_params:
     discriminator_gan: 1
   log_params:
     log_freq_iter: 200
-    cpk_freq_epoch: 10
+    cpk_freq_epoch: 100
 
 reconstruction_params:
-  num_images: null
+  num_videos: null
   format: '.gif'
 
 transfer_params:

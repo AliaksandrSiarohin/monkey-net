@@ -67,16 +67,14 @@ train_params:
     cpk_freq_epoch: 10
 
 reconstruction_params:
-  num_images: null
+  num_videos: null
   format: '.gif'
 
 transfer_params:
   num_pairs: 100
   format: '.gif'
   normalization_params:
-    movement_mult: False
-    move_location: True
-    adapt_variance: False
+    move_location: False
 
 prediction_params:
   rnn_params:
