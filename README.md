@@ -89,8 +89,8 @@ You can find generated video there and in ```png``` subfolder loss-less verstion
 
 6) **MGif**. The preprocessed version of this dataset can be [downloaded](). [Check for details on this dataset](sup-mat/MGif/README.md). Training takes about 20 hours, on 2 gpu.
 
-7) **Vox**. The dataset can be downloaded and preprocessed using a script.
-``` cd data; ./get_vox.sh ```
+7) **Vox**. The dataset can be downloaded and preprocessed using a script:
+``` cd data; ./get_vox.sh ```.
 
 
 
