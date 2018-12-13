@@ -79,15 +79,19 @@ class KPDetector(nn.Module):
     """
 
     def __init__(self, block_expansion, num_kp, num_channels, max_features, num_blocks, temperature,
-                 kp_variance):
+                 kp_variance, scale_factor=1):
         super(KPDetector, self).__init__()
 
         self.predictor = Hourglass(block_expansion, in_features=num_channels, out_features=num_kp,
                                    max_features=max_features, num_blocks=num_blocks)
         self.temperature = temperature
         self.kp_variance = kp_variance
+        self.scale_factor = scale_factor
 
     def forward(self, x):
+        if self.scale_factor != 1:
+           x = F.interpolate(x, scale_factor=(1, self.scale_factor, self.scale_factor))
+
         heatmap = self.predictor(x)
         final_shape = heatmap.shape
         heatmap = heatmap.view(final_shape[0], final_shape[1], final_shape[2], -1)

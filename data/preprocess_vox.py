@@ -7,6 +7,8 @@ import numpy as np
 in_dir = 'unzippedIntervalFaces/data/%s/1.6/'
 img_size = (256, 256)
 out_dir = 'vox'
+format = '.jpg'
+
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 
@@ -19,7 +21,7 @@ for partition in ['train', 'test']:
         celeb_dir = in_dir % celeb
         for video_dir in os.listdir(celeb_dir):
             for part_dir in os.listdir(os.path.join(celeb_dir, video_dir)):
-                result_name = celeb + "-" + video_dir + "-" + part_dir + ".jpg"
+                result_name = celeb + "-" + video_dir + "-" + part_dir + format
                 part_dir = os.path.join(celeb_dir, video_dir, part_dir) 
                 images = [resize(imread(os.path.join(part_dir, img_name)), img_size)  for img_name in sorted(os.listdir(part_dir))]
                 if len(images) > 100 or len(images) < 4:

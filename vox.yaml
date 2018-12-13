@@ -18,7 +18,8 @@ model_params:
      temperature: 0.1
      block_expansion: 32
      max_features: 1024
-     num_blocks: 7
+     num_blocks: 5
+     scale_factor: 0.25
   generator_params:
     block_expansion: 32
     max_features: 1024
@@ -27,9 +28,10 @@ model_params:
     dense_motion_params:
       block_expansion: 32
       max_features: 1024
-      num_blocks: 7
+      num_blocks: 5
       use_mask: True
       use_correction: True
+      scale_factor: 0.25
       mask_embedding_params:
         use_heatmap: True
         use_deformed_appearance: True
@@ -53,7 +55,7 @@ train_params:
   num_epochs: 15
   epoch_milestones: [10]
   lr: 2.0e-4
-  batch_size: 32
+  batch_size: 20
   loss_weights:
     reconstruction: [10, 10, 10, 10, 1]
     reconstruction_deformed: 0
@@ -92,5 +94,3 @@ visualizer_params:
   kp_size: 2
   draw_border: False
   colormap: 'gist_rainbow'
-
-  discriminator_gan: 1

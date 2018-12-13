@@ -11,7 +11,7 @@ class MovementEmbeddingModule(nn.Module):
     """
 
     def __init__(self, num_kp, kp_variance, num_channels, use_deformed_appearance=False, use_difference=False,
-                 use_heatmap=True, add_bg_feature_map=False, heatmap_type='gaussian', norm_const=100):
+                 use_heatmap=True, add_bg_feature_map=False, heatmap_type='gaussian', norm_const='sum', scale_factor=1):
         super(MovementEmbeddingModule, self).__init__()
 
         assert heatmap_type in ['gaussian', 'difference']
@@ -28,6 +28,7 @@ class MovementEmbeddingModule(nn.Module):
         self.use_heatmap = use_heatmap
         self.add_bg_feature_map = add_bg_feature_map
         self.norm_const = norm_const
+        self.scale_factor = scale_factor
 
     def normalize_heatmap(self, heatmap):
         if self.norm_const == "sum":
@@ -39,6 +40,9 @@ class MovementEmbeddingModule(nn.Module):
             return heatmap / self.norm_const
 
     def forward(self, appearance_frame, kp_video, kp_appearance):
+        if self.scale_factor != 1:
+           x = F.interpolate(x, scale_factor=(1, self.scale_factor, self.scale_factor))
+
         spatial_size = appearance_frame.shape[3:]
 
         bs, _, _, h, w = appearance_frame.shape
