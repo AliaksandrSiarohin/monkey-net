@@ -7,6 +7,11 @@ dataset_params:
       horizontal_flip: True
     crop_param:
       size: [64, 64]
+    rotation_param:
+      degrees: [-45, 45]
+    resize_param:
+      ratio: [0.9, 1.1]
+
 
 model_params:
   common_params:
@@ -33,15 +38,15 @@ model_params:
         use_heatmap: True
         use_deformed_appearance: True
         heatmap_type: 'difference'
-        norm_const: 1000
+        norm_const: 'sum'
       num_group_blocks: 2
     kp_embedding_params:
       use_heatmap: True
-      norm_const: 1000
+      norm_const: 'sum'
       heatmap_type: 'difference'
   discriminator_params:
     kp_embedding_params:
-      norm_const: 1000
+      norm_const: 'sum'
     block_expansion: 32
     max_features: 256
     num_blocks: 4

@@ -12,7 +12,7 @@ class DenseMotionModule(nn.Module):
     """
 
     def __init__(self, block_expansion, num_blocks, max_features, mask_embedding_params, num_kp,
-                 num_channels, kp_variance, use_correction, use_mask, bg_init=2, num_group_blocks=0):
+                 num_channels, kp_variance, use_correction, use_mask, bg_init=2, num_group_blocks=0, scale_factor=1):
         super(DenseMotionModule, self).__init__()
         self.mask_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance, num_channels=num_channels,
                                                       add_bg_feature_map=True, **mask_embedding_params)
@@ -37,8 +37,12 @@ class DenseMotionModule(nn.Module):
         self.num_kp = num_kp
         self.use_correction = use_correction
         self.use_mask = use_mask
+        self.scale_factor = scale_factor
 
     def forward(self, appearance_frame, kp_video, kp_appearance):
+        if self.scale_factor != 1:
+           appearance_frame = F.interpolate(appearance_frame, scale_factor=(1, self.scale_factor, self.scale_factor))
+
         prediction = self.mask_embedding(appearance_frame, kp_video, kp_appearance)
         for block in self.group_blocks:
             prediction = block(prediction)
