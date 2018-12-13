@@ -79,6 +79,7 @@ prediction_params:
      num_features: 1024
      num_layers: 1
      dropout: 0
+  predict_variance: False
   num_epochs: 1000
   lr: 0.001
   batch_size: 256

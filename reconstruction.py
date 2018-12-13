@@ -9,6 +9,22 @@ import imageio
 from sync_batchnorm import DataParallelWithCallback
 
 
+def generate(generator, appearance_image, kp_appearance, kp_video):
+    out = {'video_prediction': [], 'video_deformed': []}
+    for i in range(kp_video['mean'].shape[1]):
+        kp_target = {k: v[:, i:(i + 1)] for k, v in kp_video.items()}
+        kp_dict_part = {'kp_video': kp_target, 'kp_appearance': kp_appearance}
+        out_part = generator(appearance_image, **kp_dict_part)
+        out['video_prediction'].append(out_part['video_prediction'])
+        out['video_deformed'].append(out_part['video_deformed'])
+
+    out['video_prediction'] = torch.cat(out['video_prediction'], dim=2)
+    out['video_deformed'] = torch.cat(out['video_deformed'], dim=2)
+    out['kp_video'] = kp_video
+    out['kp_appearance'] = kp_appearance
+    return out
+
+
 def reconstruction(config, generator, kp_detector, checkpoint, log_dir, dataset):
     png_dir = os.path.join(log_dir, 'reconstruction/png')
     log_dir = os.path.join(log_dir, 'reconstruction')
@@ -32,27 +48,18 @@ def reconstruction(config, generator, kp_detector, checkpoint, log_dir, dataset)
     generator.eval()
     kp_detector.eval()
 
+    cat_dict = lambda l, dim: {k: torch.cat([v[k] for v in l], dim=dim) for k in l[0]}
     for it, x in tqdm(enumerate(dataloader)):
         if config['reconstruction_params']['num_videos'] is not None:
             if it > config['reconstruction_params']['num_videos']:
                 break
         with torch.no_grad():
             kp_appearance = kp_detector(x['video_array'][:, :, :1])
-            kp_video = []
-            out = {'video_prediction': [], 'video_deformed': []}
-            for i in range(x['video_array'].shape[2]):
-                kp_target = kp_detector(x['video_array'][:, :, i:(i + 1)])
-                kp_video.append(kp_target)
-                kp_dict_part = {'kp_video': kp_target, 'kp_appearance': kp_appearance}
-                out_part = generator(x['video_array'][:, :, :1], **kp_dict_part)
-                out['video_prediction'].append(out_part['video_prediction'])
-                out['video_deformed'].append(out_part['video_deformed'])
+            d = x['video_array'].shape[2]
+            kp_video = cat_dict([kp_detector(x['video_array'][:, :, i:(i + 1)]) for i in range(d)], dim=1)
 
-            out['video_prediction'] = torch.cat(out['video_prediction'], dim=2)
-            out['video_deformed'] = torch.cat(out['video_deformed'], dim=2)
-            out['kp_video'] = {k: torch.cat(list(map(lambda x: x[k], kp_video)), dim=1) for k in kp_appearance.keys()}
-            out['kp_appearance'] = kp_appearance
-
+            out = generate(generator, appearance_image=x['video_array'][:, :, :1], kp_appearance=kp_appearance,
+                           kp_video=kp_video)
             x['appearance_array'] = x['video_array'][:, :, :1]
 
             # Store to .png for evaluation

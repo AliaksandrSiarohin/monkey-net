@@ -12,6 +12,8 @@ from tqdm import trange
 from frames_dataset import FramesDataset
 from sync_batchnorm import DataParallelWithCallback
 
+from reconstruction import generate
+
 
 class KPDataset(Dataset):
     """Dataset of detected keypoints"""
@@ -61,8 +63,9 @@ def prediction(config, generator, kp_detector, checkpoint, log_dir):
     prediction_params = config['prediction_params']
 
     for it, x in tqdm(enumerate(dataloader)):
-        if it == prediction_params['train_size']:
-            break
+        if prediction_params['train_size'] is not None:
+            if it > prediction_params['train_size']:
+                break
         with torch.no_grad():
             keypoints = []
             for i in range(x['video_array'].shape[2]):
@@ -124,21 +127,11 @@ def prediction(config, generator, kp_detector, checkpoint, log_dir):
             kp_video = predictor(kp_init)
             for k in kp_video:
                 kp_video[k][:, :init_frames] = kp_init[k][:, :init_frames]
-            if 'var' in kp_video:
+            if 'var' in kp_video and prediction_params['predict_variance']:
                 kp_video['var'] = kp_init['var'][:, (init_frames - 1):init_frames].repeat(1, kp_video['var'].shape[1],
                                                                                           1, 1, 1)
-            out = {'video_prediction': [], 'video_deformed': []}
-            for i in range(x['video_array'].shape[2]):
-                kp_target = {k: v[:, i:(i + 1)] for k, v in kp_video.items()}
-                kp_dict_part = {'kp_video': kp_target, 'kp_appearance': kp_appearance}
-                out_part = generator(x['video_array'][:, :, :1], **kp_dict_part)
-                out['video_prediction'].append(out_part['video_prediction'])
-                out['video_deformed'].append(out_part['video_deformed'])
-
-            out['video_prediction'] = torch.cat(out['video_prediction'], dim=2)
-            out['video_deformed'] = torch.cat(out['video_deformed'], dim=2)
-            out['kp_video'] = kp_video
-            out['kp_appearance'] = kp_appearance
+            out = generate(generator, appearance_image=x['video_array'][:, :, :1], kp_appearance=kp_appearance,
+                           kp_video=kp_video)
 
             x['appearance_array'] = x['video_array'][:, :, :1]
 

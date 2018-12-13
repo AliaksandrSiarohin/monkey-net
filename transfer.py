@@ -28,7 +28,8 @@ def make_symetric_matrix(torch_matrix):
     return res
 
 
-def normalize_kp(kp_video, kp_appearance, movement_mult=False, move_location=False, adapt_variance=False, clip_mean=False):
+def normalize_kp(kp_video, kp_appearance, movement_mult=False, move_location=False, adapt_variance=False,
+                 clip_mean=False):
     if movement_mult:
         appearance_area = ConvexHull(kp_appearance['mean'][0, 0].data.cpu().numpy()).volume
         video_area = ConvexHull(kp_video['mean'][0, 0].data.cpu().numpy()).volume
@@ -61,7 +62,24 @@ def normalize_kp(kp_video, kp_appearance, movement_mult=False, move_location=Fal
     return kp_video
 
 
-def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
+def transfer_one(generator, kp_detector, source_image, driving_video, transfer_params):
+    cat_dict = lambda l, dim: {k: torch.cat([v[k] for v in l], dim=dim) for k in l[0]}
+    d = driving_video.shape[2]
+    kp_video = cat_dict([kp_detector(driving_video[:, :, i:(i + 1)]) for i in range(d)], dim=1)
+    kp_appearance = kp_detector(source_image)
+
+    kp_video_norm = normalize_kp(kp_video, kp_appearance, **transfer_params['normalization_params'])
+    kp_video_list = [{k: v[:, i:(i + 1)] for k, v in kp_video_norm.items()} for i in range(d)]
+    out = cat_dict([generator(appearance_frame=source_image, kp_video=kp, kp_appearance=kp_appearance)
+                    for kp in kp_video_list], dim=2)
+    out['kp_video'] = kp_video
+    out['kp_appearance'] = kp_appearance
+    out['kp_norm'] = kp_video_norm
+
+    return out
+
+
+def transfer(config, generator, kp_detector, checkpoint, log_dir, dataset):
     log_dir = os.path.join(log_dir, 'transfer')
     png_dir = os.path.join(log_dir, 'png')
     transfer_params = config['transfer_params']
@@ -70,7 +88,7 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=1)
 
     if checkpoint is not None:
-        Logger.load_cpk(checkpoint, generator=generator, kp_detector=kp_extractor)
+        Logger.load_cpk(checkpoint, generator=generator, kp_detector=kp_detector)
     else:
         raise AttributeError("Checkpoint should be specified for mode='transfer'.")
 
@@ -81,28 +99,17 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
         os.makedirs(png_dir)
 
     generator = DataParallelWithCallback(generator)
-    kp_extractor = DataParallelWithCallback(kp_extractor)
+    kp_detector = DataParallelWithCallback(kp_detector)
 
     generator.eval()
-    kp_extractor.eval()
-    cat_dict = lambda l, dim: {k: torch.cat([v[k] for v in l], dim=dim) for k in l[0]}
+    kp_detector.eval()
+
     for it, x in tqdm(enumerate(dataloader)):
         with torch.no_grad():
             x = {key: value if not hasattr(value, 'cuda') else value.cuda() for key, value in x.items()}
-            motion_video = x['first_video_array']
-            d = motion_video.shape[2]
-            appearance_frame = x['second_video_array'][:, :, :1, :, :]
-            kp_video = cat_dict([kp_extractor(motion_video[:, :, i:(i + 1)]) for i in range(d)], dim=1)
-            kp_appearance = kp_extractor(appearance_frame)
-
-            kp_video_norm = normalize_kp(kp_video, kp_appearance, **transfer_params['normalization_params'])
-            kp_video_list = [{k: v[:, i:(i + 1)] for k, v in kp_video_norm.items()} for i in range(d)]
-            out = cat_dict([generator(appearance_frame=appearance_frame, kp_video=kp, kp_appearance=kp_appearance)
-                            for kp in kp_video_list], dim=2)
-            out['kp_video'] = kp_video
-            out['kp_appearance'] = kp_appearance
-            out['kp_norm'] = kp_video_norm
-
+            driving_video = x['first_video_array']
+            source_image = x['second_video_array'][:, :, :1, :, :]
+            out = transfer_one(generator, kp_detector, source_image, driving_video, transfer_params)
             img_name = "-".join([x['first_name'][0], x['second_name'][0]])
 
             # Store to .png for evaluation
@@ -110,6 +117,6 @@ def transfer(config, generator, kp_extractor, checkpoint, log_dir, dataset):
             out_video_batch = np.concatenate(np.transpose(out_video_batch, [0, 2, 3, 4, 1])[0], axis=1)
             imageio.imsave(os.path.join(png_dir, img_name + '.png'), (255 * out_video_batch).astype(np.uint8))
 
-            image = Visualizer(**config['visualizer_params']).visualize_transfer(inp=x, out=out)
-
+            image = Visualizer(**config['visualizer_params']).visualize_transfer(driving_video=driving_video,
+                                                                                 source_image=source_image, out=out)
             imageio.mimsave(os.path.join(log_dir, img_name + transfer_params['format']), image)

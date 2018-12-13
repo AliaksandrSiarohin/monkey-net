@@ -125,14 +125,14 @@ class Visualizer:
                 out.append(self.create_video_column(arg))
         return np.concatenate(out, axis=2)
 
-    def visualize_transfer(self, inp, out):
+    def visualize_transfer(self, driving_video, source_image, out):
         out_video_batch = out['video_prediction'].data.cpu().numpy()
         appearance_deformed_batch = out['video_deformed'].data.cpu().numpy()
-        motion_video_batch = inp['first_video_array'].data.cpu().numpy()
-        appearance_video_batch = inp['second_video_array'][:, :, 0:1].data.cpu().repeat(1, 1, out_video_batch.shape[2],
-                                                                                        1, 1).numpy()
-        video_first_frame = inp['first_video_array'][:, :, 0:1].data.cpu().repeat(1, 1, out_video_batch.shape[2], 1,
-                                                                                  1).numpy()
+        motion_video_batch = driving_video.data.cpu().numpy()
+        appearance_video_batch = source_image[:, :, 0:1].data.cpu().repeat(1, 1, out_video_batch.shape[2],
+                                                                           1, 1).numpy()
+        video_first_frame = driving_video[:, :, 0:1].data.cpu().repeat(1, 1, out_video_batch.shape[2], 1,
+                                                                       1).numpy()
 
         kp_video = out['kp_video']['mean'].data.cpu().numpy()
         kp_appearance = out['kp_appearance']['mean'].data.cpu().repeat(1, out_video_batch.shape[2], 1, 1).numpy()
