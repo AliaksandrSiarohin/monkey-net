@@ -321,12 +321,8 @@ class ColorJitter(object):
 
 
 class SelectRandomFrames(object):
-    def __init__(self, consequent=False, select_appearance_frame=True):
+    def __init__(self, consequent=False, number_of_frames=2):
         self.consequent = consequent
-        self.select_appearance_frame = select_appearance_frame
-        self.number_of_frames = 1
-
-    def set_number_of_frames(self, number_of_frames):
         self.number_of_frames = number_of_frames
 
     def __call__(self, clip):
@@ -338,7 +334,7 @@ class SelectRandomFrames(object):
         PIL.Image or numpy.ndarray: List of number_of_frames images
         """
         frame_count = len(clip)
-        num_frames_to_select = self.number_of_frames + self.select_appearance_frame
+        num_frames_to_select = self.number_of_frames
         if self.consequent:
             first_frame = np.random.choice(max(1, frame_count - num_frames_to_select + 1), size=1)[0]
             selected = clip[first_frame:(first_frame + num_frames_to_select)]
@@ -365,10 +361,9 @@ class VideoToTensor(object):
 
 
 class AllAugmentationTransform:
-    def __init__(self, resize_param=None, rotation_param=None, flip_param=None, crop_param=None,
-                 select_frames_param={'select_appearance_frame': True, 'consequent': False}, jitter_param=None):
+    def __init__(self, resize_param=None, rotation_param=None, flip_param=None, crop_param=None, jitter_param=None):
         self.transforms = []
-        self.select = SelectRandomFrames(**select_frames_param)
+        self.select = SelectRandomFrames()
         self.transforms.append(self.select)
 
         if flip_param is not None:
@@ -387,9 +382,6 @@ class AllAugmentationTransform:
             self.transforms.append(ColorJitter(**jitter_param))
 
         self.transforms.append(SplitVideoAppearance())
-
-    def set_number_of_frames(self, number_of_frames):
-        self.select.set_number_of_frames(number_of_frames)
 
     def __call__(self, clip):
         for t in self.transforms:

@@ -47,9 +47,6 @@ class FramesDataset(Dataset):
     def __len__(self):
         return len(self.images)
 
-    def set_number_of_frames_per_sample(self, number_of_frames):
-        self.transform.set_number_of_frames(number_of_frames)
-
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir, self.images[idx])
         if img_name.lower().endswith('.png') or img_name.lower().endswith('.jpg'):
@@ -123,14 +120,3 @@ class PairedDataset(Dataset):
         second = {'second_' + key: value for key, value in second.items()}
 
         return {**first, **second}
-
-if __name__ == "__main__":
-    actions_dataset = FramesDataset(root_dir='data/actions', is_train=True)
-
-    video = actions_dataset[20]['video_array']
-    from skimage.io import imsave
-
-    imsave('1.png', video[0])
-    imsave('2.png', video[1])
-
-    #imageio.mimsave('movie.gif', video)
