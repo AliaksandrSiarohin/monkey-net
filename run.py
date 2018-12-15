@@ -19,7 +19,6 @@ from reconstruction import reconstruction
 from transfer import transfer
 from prediction import prediction
 
-
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--config", required=True, help="path to config")

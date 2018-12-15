@@ -41,15 +41,16 @@ model_params:
         use_deformed_appearance: True
         use_difference: True
         heatmap_type: 'difference'
-        norm_const: 'sum'
+        norm_const: 100
       num_group_blocks: 2
     kp_embedding_params:
+      scale_factor: 0.5
       use_heatmap: True
-      norm_const: 'sum'
+      norm_const: 100
       heatmap_type: 'difference'
   discriminator_params:
     kp_embedding_params:
-      norm_const: 'sum'
+      norm_const: 100
     block_expansion: 32
     max_features: 256
     num_blocks: 4

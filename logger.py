@@ -134,10 +134,10 @@ class Visualizer:
         video_first_frame = driving_video[:, :, 0:1].data.cpu().repeat(1, 1, out_video_batch.shape[2], 1,
                                                                        1).numpy()
 
-        kp_video = out['kp_video']['mean'].data.cpu().numpy()
-        kp_appearance = out['kp_appearance']['mean'].data.cpu().repeat(1, out_video_batch.shape[2], 1, 1).numpy()
+        kp_video = out['kp_driving']['mean'].data.cpu().numpy()
+        kp_appearance = out['kp_source']['mean'].data.cpu().repeat(1, out_video_batch.shape[2], 1, 1).numpy()
         kp_norm = out['kp_norm']['mean'].data.cpu().numpy()
-        kp_video_first = out['kp_video']['mean'][:, :1].data.cpu().repeat(1, out_video_batch.shape[2], 1, 1).numpy()
+        kp_video_first = out['kp_driving']['mean'][:, :1].data.cpu().repeat(1, out_video_batch.shape[2], 1, 1).numpy()
 
         video_first_frame = np.transpose(video_first_frame, [0, 2, 3, 4, 1])
         out_video_batch = np.transpose(out_video_batch, [0, 2, 3, 4, 1])
@@ -153,12 +153,15 @@ class Visualizer:
 
     def visualize_reconstruction(self, inp, out):
         out_video_batch = out['video_prediction'].data.cpu().numpy()
-        gt_video_batch = inp['video_array'].data.cpu().numpy()
+        if 'driving' in inp:
+            gt_video_batch = inp['driving'].data.cpu().numpy()
+        else:
+            gt_video_batch = inp['video'].data.cpu().numpy()
         appearance_deformed_batch = out['video_deformed'].data.cpu().numpy()
-        appearance_video_batch = inp['appearance_array'].data.cpu().repeat(1, 1, out_video_batch.shape[2], 1, 1).numpy()
+        appearance_video_batch = inp['source'].data.cpu().repeat(1, 1, out_video_batch.shape[2], 1, 1).numpy()
 
-        kp_video = out['kp_video']['mean'].data.cpu().numpy()
-        kp_appearance = out['kp_appearance']['mean'].data.cpu().repeat(1, out_video_batch.shape[2], 1, 1).numpy()
+        kp_video = out['kp_driving']['mean'].data.cpu().numpy()
+        kp_appearance = out['kp_source']['mean'].data.cpu().repeat(1, out_video_batch.shape[2], 1, 1).numpy()
 
         out_video_batch = np.transpose(out_video_batch, [0, 2, 3, 4, 1])
         gt_video_batch = np.transpose(gt_video_batch, [0, 2, 3, 4, 1])

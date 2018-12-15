@@ -60,10 +60,10 @@ class Discriminator(nn.Module):
         self.down_blocks = nn.ModuleList(down_blocks)
         self.conv = nn.Conv3d(self.down_blocks[-1].conv.out_channels, out_channels=1, kernel_size=1)
 
-    def forward(self, x, kp_video, kp_appearance):
+    def forward(self, x, kp_driving, kp_source):
         out_maps = [x]
         if self.kp_embedding:
-            heatmap = self.kp_embedding(x, kp_video, kp_appearance)
+            heatmap = self.kp_embedding(x, kp_driving, kp_source)
             out = torch.cat([x, heatmap], dim=1)
         else:
             out = x

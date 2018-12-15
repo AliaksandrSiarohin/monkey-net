@@ -31,7 +31,7 @@ model_params:
       use_correction: True
       mask_embedding_params:
         use_heatmap: True
-        use_deformed_appearance: True
+        use_deformed_source_image: True
         heatmap_type: 'difference'
         norm_const: 'sum'
       num_group_blocks: 2

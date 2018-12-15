@@ -13,15 +13,15 @@ def generate(generator, appearance_image, kp_appearance, kp_video):
     out = {'video_prediction': [], 'video_deformed': []}
     for i in range(kp_video['mean'].shape[1]):
         kp_target = {k: v[:, i:(i + 1)] for k, v in kp_video.items()}
-        kp_dict_part = {'kp_video': kp_target, 'kp_appearance': kp_appearance}
+        kp_dict_part = {'kp_driving': kp_target, 'kp_source': kp_appearance}
         out_part = generator(appearance_image, **kp_dict_part)
         out['video_prediction'].append(out_part['video_prediction'])
         out['video_deformed'].append(out_part['video_deformed'])
 
     out['video_prediction'] = torch.cat(out['video_prediction'], dim=2)
     out['video_deformed'] = torch.cat(out['video_deformed'], dim=2)
-    out['kp_video'] = kp_video
-    out['kp_appearance'] = kp_appearance
+    out['kp_driving'] = kp_video
+    out['kp_source'] = kp_appearance
     return out
 
 
@@ -54,13 +54,13 @@ def reconstruction(config, generator, kp_detector, checkpoint, log_dir, dataset)
             if it > config['reconstruction_params']['num_videos']:
                 break
         with torch.no_grad():
-            kp_appearance = kp_detector(x['video_array'][:, :, :1])
-            d = x['video_array'].shape[2]
-            kp_video = cat_dict([kp_detector(x['video_array'][:, :, i:(i + 1)]) for i in range(d)], dim=1)
+            kp_appearance = kp_detector(x['video'][:, :, :1])
+            d = x['video'].shape[2]
+            kp_video = cat_dict([kp_detector(x['video'][:, :, i:(i + 1)]) for i in range(d)], dim=1)
 
-            out = generate(generator, appearance_image=x['video_array'][:, :, :1], kp_appearance=kp_appearance,
+            out = generate(generator, appearance_image=x['video'][:, :, :1], kp_appearance=kp_appearance,
                            kp_video=kp_video)
-            x['appearance_array'] = x['video_array'][:, :, :1]
+            x['source'] = x['video'][:, :, :1]
 
             # Store to .png for evaluation
             out_video_batch = out['video_prediction'].data.cpu().numpy()
@@ -71,7 +71,7 @@ def reconstruction(config, generator, kp_detector, checkpoint, log_dir, dataset)
             image_name = x['name'][0] + config['reconstruction_params']['format']
             imageio.mimsave(os.path.join(log_dir, image_name), image)
 
-            loss = reconstruction_loss(out['video_prediction'].cpu(), x['video_array'].cpu(), 1)
+            loss = reconstruction_loss(out['video_prediction'].cpu(), x['video'].cpu(), 1)
             loss_list.append(loss.data.cpu().numpy())
             del x, kp_video, kp_appearance, out, loss
     print("Reconstruction loss: %s" % np.mean(loss_list))

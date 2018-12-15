@@ -90,7 +90,7 @@ class KPDetector(nn.Module):
 
     def forward(self, x):
         if self.scale_factor != 1:
-           x = F.interpolate(x, scale_factor=(1, self.scale_factor, self.scale_factor))
+            x = F.interpolate(x, scale_factor=(1, self.scale_factor, self.scale_factor))
 
         heatmap = self.predictor(x)
         final_shape = heatmap.shape
@@ -101,45 +101,3 @@ class KPDetector(nn.Module):
         out = gaussian2kp(heatmap, self.kp_variance)
 
         return out
-
-
-if __name__ == "__main__":
-    import imageio
-    import numpy as np
-
-    kp_array = np.zeros((2, 1, 6, 2), dtype='float32')
-    kp_var = np.zeros((2, 1, 6, 1, 1), dtype='float32')
-
-    for i in range(5, 11):
-        kp_array[0, :, i - 5, 0] = 3 * i / 64
-        kp_array[0, :, i - 5, 1] = 6 * i / 128
-
-        kp_array[1, :, i - 5, 0] = 3 * i / 64
-        kp_array[1, :, i - 5, 1] = 6 * i / 128
-
-    # kp_var[:, :, :, 0, 0] = 0.01
-    # kp_var[:, :, :, 0, 1] = 0.005
-    # kp_var[:, :, :, 1, 0] = 0.005
-    # kp_var[:, :, :, 1, 1] = 0.03
-
-    kp_var[:, :, :, 0] = 0.01
-
-    kp_array = 2 * kp_array - 1
-
-    mean_kp = torch.from_numpy(kp_array)
-    var_kp = torch.from_numpy(kp_var)
-
-    out = kp2gaussian({'mean': mean_kp, 'var': var_kp}, (128, 128), kp_variance=0.01)  # 'single')
-
-    kp = gaussian2kp(out, kp_variance='single')
-
-    print(kp['var'].shape)
-    print(kp['mean'][0])
-    print(kp['var'][0])
-
-    out = out.numpy()
-
-    out /= out.max()
-    out = 1 - np.squeeze(out)
-    imageio.mimsave('movie1.gif', out[0])
-    imageio.mimsave('movie2.gif', out[1])

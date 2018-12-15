@@ -56,24 +56,24 @@ class MotionTransferGenerator(nn.Module):
         deformed_inp = F.grid_sample(inp, deformation)
         return deformed_inp
 
-    def forward(self, appearance_frame, kp_video, kp_appearance):
-        appearance_skips = self.appearance_encoder(appearance_frame)
+    def forward(self, source_image, kp_driving, kp_source):
+        appearance_skips = self.appearance_encoder(source_image)
 
-        deformations_absolute = self.dense_motion_module(appearance_frame=appearance_frame, kp_video=kp_video,
-                                                         kp_appearance=kp_appearance)
+        deformations_absolute = self.dense_motion_module(source_image=source_image, kp_driving=kp_driving,
+                                                         kp_source=kp_source)
 
         deformed_skips = [self.deform_input(skip, deformations_absolute) for skip in appearance_skips]
 
         if self.kp_embedding_module is not None:
-            d = kp_video['mean'].shape[1]
-            movement_embedding = self.kp_embedding_module(appearance_frame=appearance_frame, kp_video=kp_video,
-                                                          kp_appearance=kp_appearance)
+            d = kp_driving['mean'].shape[1]
+            movement_embedding = self.kp_embedding_module(source_image=source_image, kp_driving=kp_driving,
+                                                          kp_source=kp_source)
             kp_skips = [F.interpolate(movement_embedding, size=(d,) + skip.shape[3:]) for skip in appearance_skips]
             skips = [torch.cat([a, b], dim=1) for a, b in zip(deformed_skips, kp_skips)]
         else:
             skips = deformed_skips
 
-        video_deformed = self.deform_input(appearance_frame, deformations_absolute)
+        video_deformed = self.deform_input(source_image, deformations_absolute)
         video_prediction = self.video_decoder(skips)
         video_prediction = self.refinement_module(video_prediction)
         video_prediction = torch.sigmoid(video_prediction)

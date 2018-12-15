@@ -19,7 +19,7 @@ class DenseMotionModule(nn.Module):
         self.difference_embedding = MovementEmbeddingModule(num_kp=num_kp, kp_variance=kp_variance,
                                                             num_channels=num_channels,
                                                             add_bg_feature_map=True, use_difference=True,
-                                                            use_heatmap=False, use_deformed_appearance=False)
+                                                            use_heatmap=False, use_deformed_source_image=False)
 
         group_blocks = []
         for i in range(num_group_blocks):
@@ -39,11 +39,11 @@ class DenseMotionModule(nn.Module):
         self.use_mask = use_mask
         self.scale_factor = scale_factor
 
-    def forward(self, appearance_frame, kp_video, kp_appearance):
+    def forward(self, source_image, kp_driving, kp_source):
         if self.scale_factor != 1:
-           appearance_frame = F.interpolate(appearance_frame, scale_factor=(1, self.scale_factor, self.scale_factor))
+            source_image = F.interpolate(source_image, scale_factor=(1, self.scale_factor, self.scale_factor))
 
-        prediction = self.mask_embedding(appearance_frame, kp_video, kp_appearance)
+        prediction = self.mask_embedding(source_image, kp_driving, kp_source)
         for block in self.group_blocks:
             prediction = block(prediction)
             prediction = F.leaky_relu(prediction, 0.2)
@@ -54,7 +54,7 @@ class DenseMotionModule(nn.Module):
             mask = prediction[:, :(self.num_kp + 1)]
             mask = F.softmax(mask, dim=1)
             mask = mask.unsqueeze(2)
-            difference_embedding = self.difference_embedding(appearance_frame, kp_video, kp_appearance)
+            difference_embedding = self.difference_embedding(source_image, kp_driving, kp_source)
             difference_embedding = difference_embedding.view(bs, self.num_kp + 1, 2, d, h, w)
             deformations_relative = (difference_embedding * mask).sum(dim=1)
         else:

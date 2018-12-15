@@ -14,6 +14,14 @@ pip install -r requirements.txt
 
 There several config (```dataset_name.yaml```) files one for each dataset. Check ```shapes.yaml``` for description of each individual parameter.
 
+### Demo Transfer
+
+In order to run a demo, use the following command:
+```
+python --config moving-gif.yaml --driving_video sup-mat/driving_video.gif --source_image sup-mat/source_image.gif --checkpoint path/to/checkpoint
+```
+The result will be stored in ```demo.gif```.
+
 ### Training
 
 In order to train a model on specific dataset run:

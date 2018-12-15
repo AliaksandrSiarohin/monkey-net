@@ -32,7 +32,7 @@ model_params:
       use_correction: True
       mask_embedding_params:
         use_heatmap: True
-        use_deformed_appearance: True
+        use_deformed_source_image: True
         heatmap_type: 'difference'
         norm_const: 10
     kp_embedding_params:
@@ -80,13 +80,13 @@ prediction_params:
      num_features: 1024
      num_layers: 1
      dropout: 0
-  predict_variance: False
+  predict_variance: True
   num_epochs: 100
   lr: 0.001
   batch_size: 256
   num_frames: 32
   init_frames: 1
-  train_size: null
+  train_size: 100
   format: '.gif'
 
 visualizer_params:

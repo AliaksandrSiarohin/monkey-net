@@ -20,8 +20,7 @@ class KPDataset(Dataset):
 
     def __init__(self, keypoints_array, num_frames):
         self.keypoints_array = keypoints_array
-        self.transform = SelectRandomFrames(consequent=True, select_appearance_frame=False)
-        self.transform.number_of_frames = num_frames
+        self.transform = SelectRandomFrames(consequent=True, number_of_frames=num_frames)
 
     def __len__(self):
         return len(self.keypoints_array)
@@ -68,8 +67,8 @@ def prediction(config, generator, kp_detector, checkpoint, log_dir):
                 break
         with torch.no_grad():
             keypoints = []
-            for i in range(x['video_array'].shape[2]):
-                kp = kp_detector(x['video_array'][:, :, i:(i + 1)])
+            for i in range(x['video'].shape[2]):
+                kp = kp_detector(x['video'][:, :, i:(i + 1)])
                 kp = {k: v.data.cpu().numpy() for k, v in kp.items()}
                 keypoints.append(kp)
             keypoints_array.append(keypoints)
@@ -117,12 +116,12 @@ def prediction(config, generator, kp_detector, checkpoint, log_dir):
     print("Make predictions...")
     for it, x in tqdm(enumerate(dataloader)):
         with torch.no_grad():
-            x['video_array'] = x['video_array'][:, :, :num_frames]
-            kp_init = kp_detector(x['video_array'])
+            x['video'] = x['video'][:, :, :num_frames]
+            kp_init = kp_detector(x['video'])
             for k in kp_init:
                 kp_init[k][:, init_frames:] = 0
 
-            kp_appearance = kp_detector(x['video_array'][:, :, :1])
+            kp_source = kp_detector(x['video'][:, :, :1])
 
             kp_video = predictor(kp_init)
             for k in kp_video:
@@ -130,10 +129,10 @@ def prediction(config, generator, kp_detector, checkpoint, log_dir):
             if 'var' in kp_video and prediction_params['predict_variance']:
                 kp_video['var'] = kp_init['var'][:, (init_frames - 1):init_frames].repeat(1, kp_video['var'].shape[1],
                                                                                           1, 1, 1)
-            out = generate(generator, appearance_image=x['video_array'][:, :, :1], kp_appearance=kp_appearance,
+            out = generate(generator, appearance_image=x['video'][:, :, :1], kp_appearance=kp_source,
                            kp_video=kp_video)
 
-            x['appearance_array'] = x['video_array'][:, :, :1]
+            x['source'] = x['video'][:, :, :1]
 
             out_video_batch = out['video_prediction'].data.cpu().numpy()
             out_video_batch = np.concatenate(np.transpose(out_video_batch, [0, 2, 3, 4, 1])[0], axis=1)
@@ -143,4 +142,4 @@ def prediction(config, generator, kp_detector, checkpoint, log_dir):
             image_name = x['name'][0] + prediction_params['format']
             imageio.mimsave(os.path.join(log_dir, image_name), image)
 
-            del x, kp_video, kp_appearance, out
+            del x, kp_video, kp_source, out

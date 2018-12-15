@@ -65,16 +65,16 @@ def normalize_kp(kp_video, kp_appearance, movement_mult=False, move_location=Fal
 def transfer_one(generator, kp_detector, source_image, driving_video, transfer_params):
     cat_dict = lambda l, dim: {k: torch.cat([v[k] for v in l], dim=dim) for k in l[0]}
     d = driving_video.shape[2]
-    kp_video = cat_dict([kp_detector(driving_video[:, :, i:(i + 1)]) for i in range(d)], dim=1)
-    kp_appearance = kp_detector(source_image)
+    kp_driving = cat_dict([kp_detector(driving_video[:, :, i:(i + 1)]) for i in range(d)], dim=1)
+    kp_source = kp_detector(source_image)
 
-    kp_video_norm = normalize_kp(kp_video, kp_appearance, **transfer_params['normalization_params'])
-    kp_video_list = [{k: v[:, i:(i + 1)] for k, v in kp_video_norm.items()} for i in range(d)]
-    out = cat_dict([generator(appearance_frame=source_image, kp_video=kp, kp_appearance=kp_appearance)
+    kp_driving_norm = normalize_kp(kp_driving, kp_source, **transfer_params['normalization_params'])
+    kp_video_list = [{k: v[:, i:(i + 1)] for k, v in kp_driving_norm.items()} for i in range(d)]
+    out = cat_dict([generator(source_image=source_image, kp_driving=kp, kp_source=kp_source)
                     for kp in kp_video_list], dim=2)
-    out['kp_video'] = kp_video
-    out['kp_appearance'] = kp_appearance
-    out['kp_norm'] = kp_video_norm
+    out['kp_driving'] = kp_driving
+    out['kp_source'] = kp_source
+    out['kp_norm'] = kp_driving_norm
 
     return out
 
@@ -107,10 +107,10 @@ def transfer(config, generator, kp_detector, checkpoint, log_dir, dataset):
     for it, x in tqdm(enumerate(dataloader)):
         with torch.no_grad():
             x = {key: value if not hasattr(value, 'cuda') else value.cuda() for key, value in x.items()}
-            driving_video = x['first_video_array']
-            source_image = x['second_video_array'][:, :, :1, :, :]
+            driving_video = x['driving_video']
+            source_image = x['source_video'][:, :, :1, :, :]
             out = transfer_one(generator, kp_detector, source_image, driving_video, transfer_params)
-            img_name = "-".join([x['first_name'][0], x['second_name'][0]])
+            img_name = "-".join([x['driving_name'][0], x['source_name'][0]])
 
             # Store to .png for evaluation
             out_video_batch = out['video_prediction'].data.cpu().numpy()

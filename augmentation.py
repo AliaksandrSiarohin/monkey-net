@@ -344,20 +344,20 @@ class SelectRandomFrames(object):
         return selected
 
 
-class SplitVideoAppearance(object):
-    def __call__(self, video_array):
-        appearance_array = np.array(video_array[:1], dtype='float32')
-        video_array = np.array(video_array[1:], dtype='float32')
-        return {'video_array': video_array.transpose((3, 0, 1, 2)),
-                'appearance_array': appearance_array.transpose((3, 0, 1, 2))}
+class SplitSourceDriving(object):
+    def __call__(self, video):
+        source = np.array(video[:1], dtype='float32')
+        video = np.array(video[1:], dtype='float32')
+        return {'video': video.transpose((3, 0, 1, 2)),
+                'source': source.transpose((3, 0, 1, 2))}
 
 
 class VideoToTensor(object):
     """Convert video array to Tensor."""
 
-    def __call__(self, video_array):
-        video_array = np.array(video_array, dtype='float32')
-        return {'video_array': video_array.transpose((3, 0, 1, 2))}
+    def __call__(self, driving):
+        driving = np.array(driving, dtype='float32')
+        return {'video': driving.transpose((3, 0, 1, 2))}
 
 
 class AllAugmentationTransform:
@@ -381,7 +381,7 @@ class AllAugmentationTransform:
         if jitter_param is not None:
             self.transforms.append(ColorJitter(**jitter_param))
 
-        self.transforms.append(SplitVideoAppearance())
+        self.transforms.append(SplitSourceDriving())
 
     def __call__(self, clip):
         for t in self.transforms:
