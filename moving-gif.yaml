@@ -24,6 +24,7 @@ model_params:
      max_features: 1024
      num_blocks: 5
      scale_factor: 0.5
+     clip_variance: 0.001 
   generator_params:
     block_expansion: 32
     max_features: 1024
@@ -50,6 +51,7 @@ model_params:
       heatmap_type: 'difference'
   discriminator_params:
     kp_embedding_params:
+      scale_factor: 0.5 
       norm_const: 100
     block_expansion: 32
     max_features: 256

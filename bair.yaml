@@ -18,6 +18,7 @@ model_params:
      block_expansion: 32
      max_features: 512
      num_blocks: 5
+     clip_variance: 0.001
   generator_params:
     block_expansion: 32
     max_features: 512

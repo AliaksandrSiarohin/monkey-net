@@ -18,8 +18,9 @@ model_params:
      temperature: 0.1
      block_expansion: 32
      max_features: 1024
+     scale_factor: 0.25 
      num_blocks: 5
-     scale_factor: 0.25
+     clip_variance: 0.001 
   generator_params:
     block_expansion: 32
     max_features: 1024
@@ -36,15 +37,17 @@ model_params:
         use_heatmap: True
         use_deformed_source_image: True
         heatmap_type: 'difference'
-        norm_const: 1000
+        norm_const: 100
       num_group_blocks: 2
     kp_embedding_params:
+      scale_factor: 0.25 
       use_heatmap: True
-      norm_const: 1000
+      norm_const: 100
       heatmap_type: 'difference'
   discriminator_params:
     kp_embedding_params:
-      norm_const: 1000
+      norm_const: 100
+      scale_factor: 0.25
     block_expansion: 32
     max_features: 256
     num_blocks: 4

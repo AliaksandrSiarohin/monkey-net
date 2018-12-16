@@ -7,6 +7,13 @@ dataset_params:
       horizontal_flip: True
     crop_param:
       size: [64, 64]
+    resize_param:
+      ratio: [0.9, 1.1]
+    jitter_param:
+      hue: 0.5
+    rotation_param:
+      degrees: [-10, 10]
+   
 
 model_params:
   common_params:
@@ -33,15 +40,15 @@ model_params:
         use_heatmap: True
         use_deformed_source_image: True
         heatmap_type: 'difference'
-        norm_const: 'sum'
+        norm_const: 100
       num_group_blocks: 2
     kp_embedding_params:
       use_heatmap: True
-      norm_const: 'sum'
+      norm_const: 100
       heatmap_type: 'difference'
   discriminator_params:
     kp_embedding_params:
-      norm_const: 'sum'
+      norm_const: 100
     block_expansion: 32
     max_features: 256
     num_blocks: 4
@@ -49,8 +56,8 @@ model_params:
 train_params:
   detach_kp_generator: False
   detach_kp_discriminator: True
-  num_epochs: 15000
-  epoch_milestones: [10000]
+  num_epochs: 4500
+  epoch_milestones: [3000]
   lr: 2.0e-4
   batch_size: 32
   loss_weights:
@@ -60,7 +67,7 @@ train_params:
     discriminator_gan: 1
   log_params:
     log_freq_iter: 200
-    cpk_freq_epoch: 10000
+    cpk_freq_epoch: 5000
 
 reconstruction_params:
   num_videos: null

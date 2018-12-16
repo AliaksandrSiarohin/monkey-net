@@ -1,7 +1,7 @@
 from torch import nn
 import torch
 import torch.nn.functional as F
-from modules.util import Hourglass, make_coordinate_grid, matrix_inverse
+from modules.util import Hourglass, make_coordinate_grid, matrix_inverse, smalest_singular
 
 
 def kp2gaussian(kp, spatial_size, kp_variance='matrix'):
@@ -40,7 +40,7 @@ def kp2gaussian(kp, spatial_size, kp_variance='matrix'):
     return out
 
 
-def gaussian2kp(heatmap, kp_variance='matrix'):
+def gaussian2kp(heatmap, kp_variance='matrix', clip_variance=None):
     """
     Extract the mean and the variance from a heatmap
     """
@@ -58,6 +58,10 @@ def gaussian2kp(heatmap, kp_variance='matrix'):
         var = var * heatmap.unsqueeze(-1)
         var = var.sum(dim=(3, 4))
         var = var.permute(0, 2, 1, 3, 4)
+        if clip_variance:
+            min_norm = torch.tensor(clip_variance).type(var.type())
+            sg = smalest_singular(var).unsqueeze(-1)
+            var = torch.max(min_norm, sg) * var / sg
         kp['var'] = var
 
     elif kp_variance == 'single':
@@ -79,7 +83,7 @@ class KPDetector(nn.Module):
     """
 
     def __init__(self, block_expansion, num_kp, num_channels, max_features, num_blocks, temperature,
-                 kp_variance, scale_factor=1):
+                 kp_variance, scale_factor=1, clip_variance=None):
         super(KPDetector, self).__init__()
 
         self.predictor = Hourglass(block_expansion, in_features=num_channels, out_features=num_kp,
@@ -87,6 +91,7 @@ class KPDetector(nn.Module):
         self.temperature = temperature
         self.kp_variance = kp_variance
         self.scale_factor = scale_factor
+        self.clip_variance = clip_variance
 
     def forward(self, x):
         if self.scale_factor != 1:
@@ -98,6 +103,6 @@ class KPDetector(nn.Module):
         heatmap = F.softmax(heatmap / self.temperature, dim=3)
         heatmap = heatmap.view(*final_shape)
 
-        out = gaussian2kp(heatmap, self.kp_variance)
+        out = gaussian2kp(heatmap, self.kp_variance, self.clip_variance)
 
         return out
