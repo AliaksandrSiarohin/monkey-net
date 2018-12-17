@@ -1,5 +1,4 @@
 import os
-import warnings
 from skimage import io, img_as_float32
 from skimage.color import gray2rgb
 from sklearn.model_selection import train_test_split
@@ -45,11 +44,11 @@ class FramesDataset(Dataset):
     """Dataset of videos, videos can be represented as an image of concatenated frames, or in '.mp4','.gif' format"""
 
     def __init__(self, root_dir, augmentation_params, image_shape=(64, 64, 3), is_train=True,
-                 random_seed=0, classes_list=None, transform=None):
+                 random_seed=0, pairs_list=None, transform=None):
         self.root_dir = root_dir
         self.images = os.listdir(root_dir)
         self.image_shape = tuple(image_shape)
-        self.classes_list = classes_list
+        self.pairs_list = pairs_list
 
         if os.path.exists(os.path.join(root_dir, 'train')):
             assert os.path.exists(os.path.join(root_dir, 'test'))
@@ -96,11 +95,11 @@ class PairedDataset(Dataset):
 
     def __init__(self, initial_dataset, number_of_pairs, seed=0):
         self.initial_dataset = initial_dataset
-        classes_list = self.initial_dataset.classes_list
+        pairs_list = self.initial_dataset.pairs_list
 
         np.random.seed(seed)
 
-        if classes_list is None:
+        if pairs_list is None:
             max_idx = min(number_of_pairs, len(initial_dataset))
             nx, ny = max_idx, max_idx
             xy = np.mgrid[:nx, :ny].reshape(2, -1).T
@@ -109,15 +108,15 @@ class PairedDataset(Dataset):
         else:
             images = self.initial_dataset.images
             name_to_index = {name: index for index, name in enumerate(images)}
-            classes = pd.read_csv(classes_list)
-            classes = classes[np.logical_and(classes['source'].isin(images), classes['driving'].isin(images))]
+            pairs = pd.read_csv(pairs_list)
+            pairs = pairs[np.logical_and(pairs['source'].isin(images), pairs['driving'].isin(images))]
 
-            number_of_pairs = min(classes.shape[0], number_of_pairs)
+            number_of_pairs = min(pairs.shape[0], number_of_pairs)
             self.pairs = []
             self.start_frames = []
             for ind in range(number_of_pairs):
                 self.pairs.append(
-                    (name_to_index[classes['driving'].iloc[ind]], name_to_index[classes['source'].iloc[ind]]))
+                    (name_to_index[pairs['driving'].iloc[ind]], name_to_index[pairs['source'].iloc[ind]]))
 
     def __len__(self):
         return len(self.pairs)
