@@ -45,7 +45,8 @@ def gaussian2kp(heatmap, kp_variance='matrix', clip_variance=None):
     Extract the mean and the variance from a heatmap
     """
     shape = heatmap.shape
-    heatmap = heatmap.unsqueeze(-1)
+    #adding small eps to avoid 'nan' in variance
+    heatmap = heatmap.unsqueeze(-1) + 1e-7
     grid = make_coordinate_grid(shape[3:], heatmap.type()).unsqueeze_(0).unsqueeze_(0).unsqueeze_(0)
 
     mean = (heatmap * grid).sum(dim=(3, 4))
