@@ -39,7 +39,7 @@ model_params:
       scale_factor: 0.5
       mask_embedding_params:
         use_heatmap: True
-        use_deformed_appearance: True
+        use_deformed_source_image: True
         use_difference: True
         heatmap_type: 'difference'
         norm_const: 100
@@ -50,8 +50,7 @@ model_params:
       norm_const: 100
       heatmap_type: 'difference'
   discriminator_params:
-    kp_embedding_params:
-      scale_factor: 0.5 
+    kp_embedding_params: 
       norm_const: 100
     block_expansion: 32
     max_features: 256

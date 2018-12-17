@@ -47,7 +47,6 @@ model_params:
   discriminator_params:
     kp_embedding_params:
       norm_const: 100
-      scale_factor: 0.25
     block_expansion: 32
     max_features: 256
     num_blocks: 4

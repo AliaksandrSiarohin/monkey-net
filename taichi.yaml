@@ -14,7 +14,7 @@ model_params:
     kp_variance: 'matrix'
     num_channels: 3
   kp_detector_params:
-     temperature: 0.25
+     temperature: 0.1
      block_expansion: 32
      max_features: 512
      num_blocks: 5
