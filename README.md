@@ -94,8 +94,7 @@ Training takes about 1 hour.
 3) **Nemo**. The preprocessed version of this dataset can be [downloaded]().
  Training takes about 6 hours.
 
-4) **Taichi**. You should ask the permission to use the dataset from @sergeytulyakov.
-Training takes about 9 hours.
+4) **Taichi**. We used the same data as MoCoGAN. Training takes about 9 hours.
 
 5) **Bair**. The preprocessed version of this dataset can be [downloaded]().
 Training takes about 4 hours.
