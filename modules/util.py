@@ -241,7 +241,7 @@ def matrix_trace(batch_of_matrix):
     return a + d
 
 
-def smalest_singular(batch_of_matrix):
+def smallest_singular(batch_of_matrix):
     a = batch_of_matrix[..., 0, 0].unsqueeze(-1)
     b = batch_of_matrix[..., 0, 1].unsqueeze(-1)
     c = batch_of_matrix[..., 1, 0].unsqueeze(-1)

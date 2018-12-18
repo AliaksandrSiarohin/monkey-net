@@ -1,101 +1,103 @@
-dataset_params:
-  root_dir: data/actions
-  classes_list: data/actions.csv
-  augmentation_params:
+dataset_params: #Parameters of the dataset
+  root_dir: data/actions #Directory containing test and train subfolders with videos, it can be '.gif' or '.mp4' videos or stacked frames (see data/shapes)
+  pairs_list: data/actions.csv #List of pairs for transfer (see data/taichi.csv)
+  image_shape: [64, 64, 3] #Shape of individual image for stacked frames
+  augmentation_params: #Parameters for train time augmentation
     flip_param:
-      time_flip: True
-      horizontal_flip: True
+      time_flip: True #Fliping the order of frames in video
+      horizontal_flip: True #Horizontal fliping
     crop_param:
-      size: [64, 64]
+      size: [64, 64] #Random croping to this size
     resize_param:
-      ratio: [0.9, 1.1]
+      ratio: [0.9, 1.1] #Random resizing in this range
     jitter_param:
-      hue: 0.5
+      hue: 0.5 #Random hue jittering
     rotation_param:
-      degrees: [-10, 10]
+      degrees: [-10, 10] #Random rotate in this range of degrees
    
 
-model_params:
+model_params: #Parameters of the Monkey-Net
   common_params:
-    num_kp: 10
-    kp_variance: 'matrix'
-    num_channels: 3
+    num_kp: 10 #Number of keypoint to use
+    kp_variance: 'matrix' #'matrix' for learning keypoint variance, 0.01 - for constant variance 0.01
+    num_channels: 3 #number of channels in image
   kp_detector_params:
-     temperature: 0.1
-     block_expansion: 32
-     max_features: 512
-     num_blocks: 5
+     temperature: 0.1 #Softmax temperature
+     block_expansion: 32 #Multiplier for number of neurons
+     max_features: 512 #Maximum number of neurons
+     num_blocks: 5 #Number of blocks in UNET
   generator_params:
-    block_expansion: 32
-    max_features: 512
-    num_blocks: 5
-    num_refinement_blocks: 4
+    block_expansion: 32 #Multiplier for number of neurons
+    max_features: 512 #Maximum number of neurons
+    num_blocks: 5 #Number of blocks in UNET
+    num_refinement_blocks: 4 #Number of additional ResBlocks at the end
     dense_motion_params:
-      block_expansion: 32
-      max_features: 512
-      num_blocks: 5
-      use_mask: True
-      use_correction: True
-      mask_embedding_params:
-        use_heatmap: True
-        use_deformed_source_image: True
-        heatmap_type: 'difference'
-        norm_const: 100
-      num_group_blocks: 2
-    kp_embedding_params:
-      use_heatmap: True
-      norm_const: 100
-      heatmap_type: 'difference'
+      block_expansion: 32 #Multiplier for number of neurons
+      max_features: 512 #Maximum number of neuro
+      num_blocks: 5 #Number of blocks in UNET
+      use_mask: True #True for predicting coarse motion
+      use_correction: True #True for predicting fine motion
+      mask_embedding_params: #Parameters of the input to dense_motion module
+        use_heatmap: True #Heatmap representation of keypoints
+        use_deformed_source_image: True #Aproximate deformation of the source image
+        heatmap_type: 'difference' #Heatmap is the difference between driving an a source frame
+        norm_const: 100 #Normalization constant \alpha, 'sum' for using sum normalization
+      num_group_blocks: 2 #Number of initial group blocks
+    kp_embedding_params: #Parameters of the keypoint input to the generator
+      use_heatmap: True #Heatmap representation of keypoints
+      norm_const: 100 #Normalization constant \alpha, 'sum' for using sum normalization
+      heatmap_type: 'difference' #Heatmap is the difference between driving an a source frame
   discriminator_params:
-    kp_embedding_params:
-      norm_const: 100
-    block_expansion: 32
-    max_features: 256
-    num_blocks: 4
+    kp_embedding_params: #Parameters of the keypoint input to the discriminator
+      norm_const: 100 #Normalization constant \alpha, 'sum' for using sum normalization
+    block_expansion: 32 #Multiplier for number of neurons
+    max_features: 256 #Maximum number of neurons
+    num_blocks: 4 #Number of blocks
 
 train_params:
-  detach_kp_generator: False
-  detach_kp_discriminator: True
+  detach_kp_generator: False #Do not update keypoints with generator loss
+  detach_kp_discriminator: True #Do not update keypoints with discriminator loss
   num_epochs: 4500
-  epoch_milestones: [3000]
+  epoch_milestones: [3000] #Drop lr in this epochs
   lr: 2.0e-4
   batch_size: 32
   loss_weights:
-    reconstruction: [10, 10, 10, 10, 1]
-    reconstruction_deformed: 0
-    generator_gan: 1
-    discriminator_gan: 1
+    reconstruction: [10, 10, 10, 10, 1] #Feature matching losses in discriminator featuremaps, first is simple L1
+    reconstruction_deformed: 0 #Loss for checking if image deformed with optical flow match the target image
+    generator_gan: 1 #LSGAN loss
+    discriminator_gan: 1 #LSGAN loss
   log_params:
-    log_freq_iter: 200
-    cpk_freq_epoch: 5000
+    log_freq_iter: 200 #Log progress this number of iterations
+    cpk_freq_epoch: 5000 #Save checkpoint this number of epochs
 
-reconstruction_params:
-  num_videos: null
-  format: '.gif'
+reconstruction_params: #Parameters for reconstruction task
+  num_videos: null #Number of videos to use in reconstruction, null for all avaliable
+  format: '.gif' #Number for saving videos '.gif' or '.mp4', the final results will be also saved in loosless '.png'
 
-transfer_params:
-  num_pairs: 100
-  format: '.gif'
-  normalization_params:
-    movement_mult: False
-    move_location: True
-    adapt_variance: False
+transfer_params: #Parameters for transfer task
+  num_pairs: 100 #Number of video pairs
+  format: '.gif' #Number for saving videos '.gif' or '.mp4', the final results will be also saved in loosless '.png'
+  normalization_params: #Parameters of transfer
+    move_location: True #Absolute or relative transfer (False - for absolute)
+    movement_mult: False #Divide movement by the scale of object
+    adapt_variance: False #Addapting the covariance matrix for relative transfer
+    clip_mean: False #Cliping the mean to be inside the image
 
-prediction_params:
-  rnn_params:
-     num_features: 1024
-     num_layers: 1
-     dropout: 0
-  predict_variance: False
-  num_epochs: 1000
+prediction_params: #Parameters for prediction task
+  rnn_params: # Parameters of network that predict movement of keypoints
+     num_features: 1024 #Number of neurons in the rnn
+     num_layers: 1 #Number of layer in the rnn
+     dropout: 0 #Dropout rate
+  predict_variance: False #Predict variance, or use variance from the first frame
+  num_epochs: 1000 #Number of epoch for training
   lr: 0.001
   batch_size: 256
-  num_frames: 32
-  init_frames: 1
-  train_size: null
-  format: '.gif'
+  num_frames: 32 #Number of frames to predict - 1
+  init_frames: 1 #Number of gt frames used for prediction
+  train_size: null #Number of videos to use as a training set, null for all avaliable
+  format: '.gif' #Number for saving videos '.gif' or '.mp4', the final results will be also saved in loosless '.png'
 
-visualizer_params:
-  kp_size: 2
-  draw_border: False
-  colormap: 'gist_rainbow'
+visualizer_params: # Visualization parameters
+  kp_size: 2 #Size of keypoint in visualization
+  draw_border: False #True to draw a white border around each image
+  colormap: 'gist_rainbow' #Colormap for keypoints

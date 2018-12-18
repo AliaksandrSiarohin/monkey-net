@@ -1,6 +1,6 @@
 dataset_params:
   root_dir: data/taichi
-  classes_list: data/taichi.csv
+  pairs_list: data/taichi.csv
   augmentation_params:
     flip_param:
       horizontal_flip: True
