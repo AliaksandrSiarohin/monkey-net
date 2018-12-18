@@ -24,11 +24,11 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--config", required=True, help="path to config")
     parser.add_argument("--out_file", default='demo.gif', help="Path to out file")
-    parser.add_argument("--driving_video", default='sup-mat/driving.gif', help="Path to driving video")
-    parser.add_argument("--source_image", default="sup-mat/source.gif", help='Path to source image')
+    parser.add_argument("--driving_video", default='sup-mat/driving.png', help="Path to driving video")
+    parser.add_argument("--source_image", default="sup-mat/source.png", help='Path to source image')
     parser.add_argument("--checkpoint", required=True, help="Path to checkpoint")
     parser.add_argument("--cpu", dest="cpu", action="store_true", help="Use cpu")
-    parser.add_argument("--image_shape", default=(64, 64), type=lambda x: tuple([int(a) for a in x.split(',')]),
+    parser.add_argument("--image_shape", default=(128, 128), type=lambda x: tuple([int(a) for a in x.split(',')]),
                         help="Image shape")
     parser.set_defaults(cpu=False)
 
@@ -53,6 +53,9 @@ if __name__ == "__main__":
 
     generator = DataParallelWithCallback(generator)
     kp_detector = DataParallelWithCallback(kp_detector)
+
+    generator.eval()
+    kp_detector.eval()
 
     with torch.no_grad():
         driving_video = VideoToTensor()(read_video(opt.driving_video, opt.image_shape + (3,)))['video']

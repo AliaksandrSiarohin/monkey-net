@@ -61,7 +61,7 @@ class Logger:
         if optimizer_discriminator is not None:
             optimizer_discriminator.load_state_dict(checkpoint['optimizer_discriminator'])
         if optimizer_kp_detector is not None:
-            optimizer_discriminator.load_state_dict(checkpoint['optimizer_kp_detector'])
+            optimizer_kp_detector.load_state_dict(checkpoint['optimizer_kp_detector'])
 
         return checkpoint['epoch'], checkpoint['it']
 
