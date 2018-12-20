@@ -2,8 +2,7 @@
 
 This repository contains the source code for paper [Animating Arbitrary Objects via Deep Motion Transfer]().
 
-![Screenshot](sup-mat/teaser.gif)
-
+![Screenshot](sup-mat/mgif-tes2.gif)
 ![Screenshot](sup-mat/bair-tes.gif)
 ![Screenshot](sup-mat/nemo-tes.gif)
 ![Screenshot](sup-mat/taichi-tes.gif)
