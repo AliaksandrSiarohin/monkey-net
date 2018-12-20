@@ -1,16 +1,16 @@
 # Animating Arbitrary Objects via Deep Motion Transfer
 
-This repository contains the source code for paper [Animating Arbitrary Objects via Deep Motion Transfer]().
+This repository contains the source code for paper [Animating Arbitrary Objects via Deep Motion Transfer]() by Aliaksandr Siarohin, Stéphane Lathuilière, Segey Tulyakov, Elisa Ricci and Nicu Sebe.
 
-Examples of motion transfer using our approach. The video on the left contains a driving video. The first row on the right shows source images. The bottom row contains animated sequences.
+Examples of motion transfer using our approach. The video on the left contains a driving video. The first row on the right shows source images. The bottom row contains animated sequences. We trained a separate network for each task.
 
-## NEMO Face Dataset
+### NEMO Face Dataset
 ![Screenshot](sup-mat/nemo-tes.gif)
-## Taichi Dataset
+### Taichi Dataset
 ![Screenshot](sup-mat/taichi-tes.gif)
-## BAIR Robot Dataset
+### BAIR Robot Dataset
 ![Screenshot](sup-mat/bair-tes.gif)
-## MGIF Dataset
+### MGIF Dataset
 ![Screenshot](sup-mat/mgif-tes.gif)
 
 
