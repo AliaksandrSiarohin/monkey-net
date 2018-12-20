@@ -53,8 +53,8 @@ model_params:
 train_params:
   detach_kp_generator: False
   detach_kp_discriminator: True
-  num_epochs: 15
-  epoch_milestones: [10]
+  num_epochs: 30
+  epoch_milestones: [20, 25]
   lr: 2.0e-4
   batch_size: 20
   loss_weights:
@@ -93,6 +93,6 @@ prediction_params:
   format: '.gif'
 
 visualizer_params:
-  kp_size: 2
+  kp_size: 5
   draw_border: False
   colormap: 'gist_rainbow'

@@ -16,17 +16,17 @@ model_params:
   kp_detector_params:
      temperature: 0.1
      block_expansion: 32
-     max_features: 512
+     max_features: 1024
      num_blocks: 5
-     clip_variance: 0.001 
+     clip_variance: 0.001
   generator_params:
     block_expansion: 32
-    max_features: 512
+    max_features: 1024
     num_blocks: 5
     num_refinement_blocks: 4
     dense_motion_params:
       block_expansion: 32
-      max_features: 512
+      max_features: 1024
       num_blocks: 5
       use_mask: True
       use_correction: True
@@ -50,8 +50,8 @@ model_params:
 train_params:
   detach_kp_generator: False
   detach_kp_discriminator: True
-  num_epochs: 375
-  epoch_milestones: [250]
+  num_epochs: 750
+  epoch_milestones: [500]
   lr: 2.0e-4
   batch_size: 32
   loss_weights:
