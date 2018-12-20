@@ -89,15 +89,15 @@ Training takes about 1 hour.
 2) **Actions**. This dataset is also saved along with repository.
  And training takes about 4 hours.
 
-3) **Nemo**. The preprocessed version of this dataset can be [downloaded]().
+3) **Nemo**. The preprocessed version of this dataset can be [downloaded](https://yadi.sk/d/lHdX-fdMKVx2Dw).
  Training takes about 6 hours.
 
-4) **Taichi**. We used the same data as [MoCoGAN](https://github.com/sergeytulyakov/mocogan). Training takes about 9 hours.
+4) **Taichi**. We used the same data as [MoCoGAN](https://github.com/sergeytulyakov/mocogan). Training takes about 15 hours.
 
-5) **Bair**. The preprocessed version of this dataset can be [downloaded]().
+5) **Bair**. The preprocessed version of this dataset can be [downloaded](https://yadi.sk/d/Zjk9qbaf3occIw).
 Training takes about 4 hours.
 
-6) **MGif**. The preprocessed version of this dataset can be [downloaded]().
+6) **MGif**. The preprocessed version of this dataset can be [downloaded](https://yadi.sk/d/5VdqLARizmnj3Q).
  [Check for details on this dataset](sup-mat/MGif/README.md). Training takes about 8 hours, on 2 gpu.
 
 7) **Vox**. The dataset can be downloaded and preprocessed using a script:
