@@ -2,30 +2,30 @@
 
 This repository contains the source code for paper [Animating Arbitrary Objects via Deep Motion Transfer]().
 
-![Screenshot](sup-mat/mgif-tes2.gif)
-![Screenshot](sup-mat/bair-tes.gif)
+Examples of motion transfer using our approach. The video on the left contains a driving video. The first row on the right shows source images. The bottom row contains animated sequences.
+
+## NEMO Face Dataset
 ![Screenshot](sup-mat/nemo-tes.gif)
+## Taichi Dataset
 ![Screenshot](sup-mat/taichi-tes.gif)
+## BAIR Robot Dataset
+![Screenshot](sup-mat/bair-tes.gif)
+## MGIF Dataset
 ![Screenshot](sup-mat/mgif-tes.gif)
 
 
-
-
-
-
 ### Requirements
-You will need ```python3```.
+We support ```python3```. To install the dependencies run:
 ```
 pip install -r requirements.txt
 ```
 
 ### YAML configs
 
-There are several config (```dataset_name.yaml```) files one for each dataset. Check ```actions.yaml``` for description of each individual parameter.
+There are several configuration (```dataset_name.yaml```) files one for each `dataset`. See ```actions.yaml``` to get description of each parameter.
 
-### Demo Transfer
-
-In order to run a demo, use the following command:
+### Motion Transfer Demo 
+To run a demo, run the following command:
 ```
 python --config moving-gif.yaml --driving_video sup-mat/driving_video.gif --source_image sup-mat/source_image.gif --checkpoint path/to/checkpoint
 ```
@@ -33,24 +33,24 @@ The result will be stored in ```demo.gif```.
 
 ### Training
 
-In order to train a model on specific dataset run:
+To train a model on specific dataset run:
 ```
 CUDA_VISIBLE_DEVICES=0 python run.py dataset_name.yaml
 ```
-This will create a folder in the log directory (each run will create a new directory).
-Checkpoints will be saved in this folder.
-You can check the loss values during training in ```log.txt```.
-You can also check train-data reconstructions in the ```train-vis``` subfolder.
+The code will create a folder in the log directory (each run will create a time-stamped new directory).
+Checkpoints will be saved to this folder.
+To check the loss values during training in see ```log.txt```.
+You can also check training data reconstructions in the ```train-vis``` subfolder.
 
 ### Reconstruction
 
-In order to check the reconstruction performance run:
+To evaluate the reconstruction performance run:
 ```
 CUDA_VISIBLE_DEVICES=0 python run.py dataset_name.yaml --mode reconstruction --checkpoint path/to/checkpoint
 ```
 You will need to specify the path to the checkpoint,
-the ```reconstruction``` subfolder will be created in the same folder as the checkpoint.
-You can find the generated video there and in ```png``` subfolder loss-less verstion in '.png' format.
+the ```reconstruction``` subfolder will be created in the checkpoint folder.
+The generated video will be stored to this folderenerated video there and in ```png``` subfolder loss-less verstion in '.png' format.
 
 ### Motion transfer
 
