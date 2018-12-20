@@ -36,7 +36,7 @@ class Discriminator(nn.Module):
     Discriminator similar to Pix2Pix
     """
 
-    def __init__(self, num_channels=3, num_kp=10, kp_variance=0.01,
+    def __init__(self, num_channels=3, num_kp=10, kp_variance=0.01, scale_factor=1,
                  block_expansion=64, num_blocks=4, max_features=512, kp_embedding_params=None):
         super(Discriminator, self).__init__()
 
@@ -59,9 +59,13 @@ class Discriminator(nn.Module):
 
         self.down_blocks = nn.ModuleList(down_blocks)
         self.conv = nn.Conv3d(self.down_blocks[-1].conv.out_channels, out_channels=1, kernel_size=1)
+        self.scale_factor = scale_factor
 
     def forward(self, x, kp_driving, kp_source):
         out_maps = [x]
+        if self.scale_factor != 1:
+            x = F.interpolate(x, scale_factor=(1, self.scale_factor, self.scale_factor))
+ 
         if self.kp_embedding:
             heatmap = self.kp_embedding(x, kp_driving, kp_source)
             out = torch.cat([x, heatmap], dim=1)

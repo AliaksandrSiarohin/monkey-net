@@ -44,6 +44,7 @@ model_params:
       norm_const: 100
       heatmap_type: 'difference'
   discriminator_params:
+    scale_factor: 0.25
     kp_embedding_params:
       norm_const: 100
     block_expansion: 32
@@ -56,7 +57,7 @@ train_params:
   num_epochs: 30
   epoch_milestones: [20, 25]
   lr: 2.0e-4
-  batch_size: 20
+  batch_size: 24
   loss_weights:
     reconstruction: [10, 10, 10, 10, 1]
     reconstruction_deformed: 0
