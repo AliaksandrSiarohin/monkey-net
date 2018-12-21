@@ -1,8 +1,10 @@
 # Animating Arbitrary Objects via Deep Motion Transfer
 
-This repository contains the source code for paper [Animating Arbitrary Objects via Deep Motion Transfer]() by Aliaksandr Siarohin, Stéphane Lathuilière, Segey Tulyakov, Elisa Ricci and Nicu Sebe.
+This repository contains the source code for the paper [Animating Arbitrary Objects via Deep Motion Transfer]() by Aliaksandr Siarohin, Stéphane Lathuilière, [Sergey Tulyakov](http://stulyakov.com), [Elisa Ricci](http://elisaricci.eu/) and [Nicu Sebe](http://disi.unitn.it/~sebe/). We  call  the proposed deep framework Monkey-Net,  as it enables motion transfer by considering MOviNg KEYpoints.
 
-Examples of motion transfer using our approach. The video on the left contains a driving video. The first row on the right shows source images. The bottom row contains animated sequences. We trained a separate network for each task.
+## Examples of motion transfer
+
+The videos on the left show the driving videos. The first row on the right for each dataset shows the source images. The bottom row contains the animated sequences with motion transferred from the driving video and object taken from the source image. We trained a separate network for each task. Note that for each task the background, the object appearance are consistent in each generated video.
 
 ### NEMO Face Dataset
 ![Screenshot](sup-mat/nemo-tes.gif)
@@ -14,7 +16,12 @@ Examples of motion transfer using our approach. The video on the left contains a
 ![Screenshot](sup-mat/mgif-tes.gif)
 
 
-### Requirements
+## Training and testing
+
+Our framework can be used in several modes. In the motion transfer mode, a static image will be animated using a driving video. In the image-to-video translation mode, given a static image, the framework will predict future frames.
+
+### Installation
+
 We support ```python3```. To install the dependencies run:
 ```
 pip install -r requirements.txt
@@ -25,6 +32,7 @@ pip install -r requirements.txt
 There are several configuration (```dataset_name.yaml```) files one for each `dataset`. See ```actions.yaml``` to get description of each parameter.
 
 ### Motion Transfer Demo 
+
 To run a demo, run the following command:
 ```
 python --config  config/moving-gif.yaml --driving_video sup-mat/driving_video.gif --source_image sup-mat/source_image.gif --checkpoint path/to/checkpoint
