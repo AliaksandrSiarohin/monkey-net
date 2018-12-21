@@ -33,7 +33,7 @@ There are several configuration (```config/dataset_name.yaml```) files one for e
 
 ### Motion Transfer Demo 
 
-To run a demo, run the following command:
+To run a demo, download a [checkpoint](https://yadi.sk/d/BX-hwuPEVm6iNw) and run the following command:
 ```
 python --config  config/moving-gif.yaml --driving_video sup-mat/driving_video.gif --source_image sup-mat/source_image.gif --checkpoint path/to/checkpoint
 ```
