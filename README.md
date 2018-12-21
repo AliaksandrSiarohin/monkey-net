@@ -29,7 +29,7 @@ pip install -r requirements.txt
 
 ### YAML configs
 
-There are several configuration (```dataset_name.yaml```) files one for each `dataset`. See ```actions.yaml``` to get description of each parameter.
+There are several configuration (```dataset_name.yaml```) in folder ```config``` files one for each `dataset`. See ```actions.yaml``` to get description of each parameter.
 
 ### Motion Transfer Demo 
 
