@@ -1,6 +1,7 @@
 dataset_params:
   root_dir: data/moving-gif-128
   image_shape: [128, 128, 3]
+#  pairs_list: pairs.csv
   augmentation_params:
     flip_param:
       horizontal_flip: True

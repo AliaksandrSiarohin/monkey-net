@@ -27,7 +27,7 @@ There are several configuration (```dataset_name.yaml```) files one for each `da
 ### Motion Transfer Demo 
 To run a demo, run the following command:
 ```
-python --config moving-gif.yaml --driving_video sup-mat/driving_video.gif --source_image sup-mat/source_image.gif --checkpoint path/to/checkpoint
+python --config  config/moving-gif.yaml --driving_video sup-mat/driving_video.gif --source_image sup-mat/source_image.gif --checkpoint path/to/checkpoint
 ```
 The result will be stored in ```demo.gif```.
 
@@ -35,7 +35,7 @@ The result will be stored in ```demo.gif```.
 
 To train a model on specific dataset run:
 ```
-CUDA_VISIBLE_DEVICES=0 python run.py dataset_name.yaml
+CUDA_VISIBLE_DEVICES=0 python run.py config/dataset_name.yaml
 ```
 The code will create a folder in the log directory (each run will create a time-stamped new directory).
 Checkpoints will be saved to this folder.
@@ -46,7 +46,7 @@ You can also check training data reconstructions in the ```train-vis``` subfolde
 
 To evaluate the reconstruction performance run:
 ```
-CUDA_VISIBLE_DEVICES=0 python run.py dataset_name.yaml --mode reconstruction --checkpoint path/to/checkpoint
+CUDA_VISIBLE_DEVICES=0 python run.py config/dataset_name.yaml --mode reconstruction --checkpoint path/to/checkpoint
 ```
 You will need to specify the path to the checkpoint,
 the ```reconstruction``` subfolder will be created in the checkpoint folder.
@@ -56,7 +56,7 @@ The generated video will be stored to this folderenerated video there and in ```
 
 In order to perform motion transfer run:
 ```
-CUDA_VISIBLE_DEVICES=0 python run.py dataset_name.yaml --mode transfer --checkpoint path/to/checkpoint
+CUDA_VISIBLE_DEVICES=0 python run.py config/dataset_name.yaml --mode transfer --checkpoint path/to/checkpoint
 ```
 You will need to specify the path to the checkpoint,
 the ```transfer``` subfolder will be created in the same folder as the checkpoint.
@@ -81,7 +81,7 @@ The approximately aligned pairs of videos are given in the data folder. (e.g  ``
 
 In order to perform image-to-video translation run:
 ```
-CUDA_VISIBLE_DEVICES=0 python run.py dataset_name.yaml --mode prediction --checkpoint path/to/checkpoint
+CUDA_VISIBLE_DEVICES=0 python run.py config/dataset_name.yaml --mode prediction --checkpoint path/to/checkpoint
 ```
 The following steps will be performed:
 * Estimate the keypoints from the training set
