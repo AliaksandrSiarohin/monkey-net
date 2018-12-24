@@ -1,6 +1,6 @@
 # Animating Arbitrary Objects via Deep Motion Transfer
 
-This repository contains the source code for the paper [Animating Arbitrary Objects via Deep Motion Transfer]() by Aliaksandr Siarohin, Stéphane Lathuilière, [Sergey Tulyakov](http://stulyakov.com), [Elisa Ricci](http://elisaricci.eu/) and [Nicu Sebe](http://disi.unitn.it/~sebe/). We  call  the proposed deep framework Monkey-Net,  as it enables motion transfer by considering MOviNg KEYpoints.
+This repository contains the source code for the paper [Animating Arbitrary Objects via Deep Motion Transfer](https://arxiv.org/abs/1812.08861) by Aliaksandr Siarohin, Stéphane Lathuilière, [Sergey Tulyakov](http://stulyakov.com), [Elisa Ricci](http://elisaricci.eu/) and [Nicu Sebe](http://disi.unitn.it/~sebe/). We  call  the proposed deep framework Monkey-Net,  as it enables motion transfer by considering MOviNg KEYpoints.
 
 ## Examples of motion transfer
 
@@ -132,4 +132,10 @@ Training takes about 4 hours.
 Citation:
 
 ```
+@article{siarohin2018animating,
+  title={Animating Arbitrary Objects via Deep Motion Transfer},
+  author={Siarohin, Aliaksandr and Lathuilière, Stéphane and Tulyakov, Sergey and Ricci, Elisa and Sebe, Nicu},
+  journal={arXiv:1812.08861},
+  year={2018}
+}
 ```
