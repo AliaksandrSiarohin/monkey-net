@@ -1,6 +1,6 @@
 # Animating Arbitrary Objects via Deep Motion Transfer
 
-This repository contains the source code for the paper [Animating Arbitrary Objects via Deep Motion Transfer]() by Aliaksandr Siarohin, Stéphane Lathuilière, [Sergey Tulyakov](http://stulyakov.com), [Elisa Ricci](http://elisaricci.eu/) and [Nicu Sebe](http://disi.unitn.it/~sebe/). We  call  the proposed deep framework Monkey-Net,  as it enables motion transfer by considering MOviNg KEYpoints.
+This repository contains the source code for the paper [Animating Arbitrary Objects via Deep Motion Transfer](https://arxiv.org/abs/1812.08861) by Aliaksandr Siarohin, Stéphane Lathuilière, [Sergey Tulyakov](http://stulyakov.com), [Elisa Ricci](http://elisaricci.eu/) and [Nicu Sebe](http://disi.unitn.it/~sebe/). We  call  the proposed deep framework Monkey-Net,  as it enables motion transfer by considering MOviNg KEYpoints. Check also the project [website](http://www.stulyakov.com/papers/monkey-net.html).
 
 ## Examples of motion transfer
 
@@ -29,11 +29,11 @@ pip install -r requirements.txt
 
 ### YAML configs
 
-There are several configuration (```dataset_name.yaml```) files one for each `dataset`. See ```actions.yaml``` to get description of each parameter.
+There are several configuration (```config/dataset_name.yaml```) files one for each `dataset`. See ```config/actions.yaml``` to get description of each parameter.
 
 ### Motion Transfer Demo 
 
-To run a demo, run the following command:
+To run a demo, download a [checkpoint](https://yadi.sk/d/BX-hwuPEVm6iNw) and run the following command:
 ```
 python --config  config/moving-gif.yaml --driving_video sup-mat/driving_video.gif --source_image sup-mat/source_image.gif --checkpoint path/to/checkpoint
 ```
@@ -120,11 +120,22 @@ Training takes about 4 hours.
 7) **Vox**. The dataset can be downloaded and preprocessed using a script:
 ``` cd data; ./get_vox.sh ```.
 
+### Training on your own dataset
+1) Resize all the videos to the same size e.g 128x128, the videos can be in '.gif' or '.mp4' format. But we recommend to make them stacked '.png' (see data/shapes), because this format is lossless.
 
+2) Create a folder ```data/dataset_name``` with 2 subfolders ```train``` and ```test```, put training videos in the ```train``` and testing in the ```test```.
+
+3) Create a config ```config/dataset_name.yaml``` (it is better to start from one of the existing configs, for 64x64 videos ```config/nemo.yaml```, for 128x128 ```config\moving-gif.yaml```, for 256x256 ```config\vox.yaml```), in dataset_params specify the root dir the ```root_dir:  data/dataset_name```. Also adjust the number of epoch in train_params.
 
 #### Additional notes
 
 Citation:
 
 ```
+@article{siarohin2018animating,
+  title={Animating Arbitrary Objects via Deep Motion Transfer},
+  author={Siarohin, Aliaksandr and Lathuilière, Stéphane and Tulyakov, Sergey and Ricci, Elisa and Sebe, Nicu},
+  journal={arXiv:1812.08861},
+  year={2018}
+}
 ```
