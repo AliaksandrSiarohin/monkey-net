@@ -91,9 +91,9 @@ def train(config, generator, discriminator, kp_detector, checkpoint, log_dir, da
 
     scheduler_generator = MultiStepLR(optimizer_generator, train_params['epoch_milestones'], gamma=0.1,
                                       last_epoch=start_epoch - 1)
-    scheduler_discriminator = MultiStepLR(optimizer_generator, train_params['epoch_milestones'], gamma=0.1,
+    scheduler_discriminator = MultiStepLR(optimizer_discriminator, train_params['epoch_milestones'], gamma=0.1,
                                           last_epoch=start_epoch - 1)
-    scheduler_kp_detector = MultiStepLR(optimizer_generator, train_params['epoch_milestones'], gamma=0.1,
+    scheduler_kp_detector = MultiStepLR(optimizer_kp_detector, train_params['epoch_milestones'], gamma=0.1,
                                         last_epoch=start_epoch - 1)
 
     dataloader = DataLoader(dataset, batch_size=train_params['batch_size'], shuffle=True, num_workers=4, drop_last=True)
@@ -141,6 +141,7 @@ def train(config, generator, discriminator, kp_detector, checkpoint, log_dir, da
                                 names=generator_loss_names(train_params['loss_weights']) + discriminator_loss_names(),
                                 values=generator_loss_values + discriminator_loss_values, inp=x, out=generated)
                 it += 1
+
 
             scheduler_generator.step()
             scheduler_discriminator.step()
