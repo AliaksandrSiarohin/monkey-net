@@ -54,20 +54,20 @@ train_params:
   detach_kp_generator: False
   detach_kp_discriminator: True
   num_epochs: 15
-  epoch_milestones: [10]
+  epoch_milestones: []
   lr: 2.0e-4
   batch_size: 20
   loss_weights:
-    reconstruction: [10, 10, 10, 10, 10]
+    reconstruction: [10, 10, 10, 10, 1]
     reconstruction_deformed: 0
     generator_gan: 1
     discriminator_gan: 1
   log_params:
     log_freq_iter: 200
-    cpk_freq_epoch: 10
+    cpk_freq_epoch: 5
 
 reconstruction_params:
-  num_videos: null
+  num_videos: 1000
   format: '.gif'
 
 transfer_params:
