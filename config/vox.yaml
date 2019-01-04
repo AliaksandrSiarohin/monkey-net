@@ -21,6 +21,7 @@ model_params:
      num_blocks: 5
      clip_variance: 0.001 
   generator_params:
+    interpolation_mode: 'trilinear'
     block_expansion: 32
     max_features: 1024
     num_blocks: 7

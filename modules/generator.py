@@ -13,8 +13,8 @@ class MotionTransferGenerator(nn.Module):
     Produce 2 versions of target frame, one warped with predicted optical flow and other refined.
     """
 
-    def __init__(self, num_channels, num_kp, kp_variance, block_expansion,
-                 max_features, num_blocks, num_refinement_blocks, dense_motion_params=None, kp_embedding_params=None):
+    def __init__(self, num_channels, num_kp, kp_variance, block_expansion, max_features, num_blocks, num_refinement_blocks,
+                 dense_motion_params=None, kp_embedding_params=None, interpolation_mode='nearest'):
         super(MotionTransferGenerator, self).__init__()
 
         self.appearance_encoder = Encoder(block_expansion, in_features=num_channels, max_features=max_features,
@@ -46,12 +46,13 @@ class MotionTransferGenerator(nn.Module):
             self.refinement_module.add_module('r' + str(i),
                                               ResBlock3D(in_features, kernel_size=(1, 3, 3), padding=(0, 1, 1)))
         self.refinement_module.add_module('conv-last', nn.Conv3d(in_features, num_channels, kernel_size=1, padding=0))
+        self.interpolation_mode = interpolation_mode
 
     def deform_input(self, inp, deformations_absolute):
         bs, d, h_old, w_old, _ = deformations_absolute.shape
         _, _, _, h, w = inp.shape
         deformations_absolute = deformations_absolute.permute(0, 4, 1, 2, 3)
-        deformation = F.interpolate(deformations_absolute, size=(d, h, w))
+        deformation = F.interpolate(deformations_absolute, size=(d, h, w), mode=self.interpolation_mode)
         deformation = deformation.permute(0, 2, 3, 4, 1)
         deformed_inp = F.grid_sample(inp, deformation)
         return deformed_inp
@@ -68,7 +69,7 @@ class MotionTransferGenerator(nn.Module):
             d = kp_driving['mean'].shape[1]
             movement_embedding = self.kp_embedding_module(source_image=source_image, kp_driving=kp_driving,
                                                           kp_source=kp_source)
-            kp_skips = [F.interpolate(movement_embedding, size=(d,) + skip.shape[3:]) for skip in appearance_skips]
+            kp_skips = [F.interpolate(movement_embedding, size=(d,) + skip.shape[3:], mode=self.interpolation_mode) for skip in appearance_skips]
             skips = [torch.cat([a, b], dim=1) for a, b in zip(deformed_skips, kp_skips)]
         else:
             skips = deformed_skips
