@@ -1,0 +1,99 @@
+dataset_params:
+  root_dir: data/vox
+  image_shape: [256, 256, 3]
+  augmentation_params:
+    flip_param:
+      horizontal_flip: True
+      time_flip: True
+    crop_param:
+      size: [256, 256]
+
+model_params:
+  common_params:
+    num_kp: 10
+    kp_variance: 'matrix'
+    num_channels: 3
+  kp_detector_params:
+     temperature: 0.1
+     block_expansion: 32
+     max_features: 1024
+     scale_factor: 1 
+     num_blocks: 5
+     clip_variance: 0.001 
+  generator_params:
+    interpolation_mode: 'trilinear'
+    block_expansion: 32
+    max_features: 1024
+    num_blocks: 7
+    num_refinement_blocks: 4
+    dense_motion_params:
+      block_expansion: 32
+      max_features: 1024
+      num_blocks: 5
+      use_mask: True
+      use_correction: True
+      scale_factor: 1
+      mask_embedding_params:
+        use_heatmap: True
+        use_deformed_source_image: True
+        heatmap_type: 'difference'
+        norm_const: 100
+      num_group_blocks: 2
+    kp_embedding_params:
+      scale_factor: 0.25 
+      use_heatmap: True
+      norm_const: 100
+      heatmap_type: 'difference'
+  discriminator_params:
+    kp_embedding_params:
+      norm_const: 100
+    block_expansion: 32
+    max_features: 256
+    num_blocks: 4
+
+train_params:
+  detach_kp_generator: False
+  detach_kp_discriminator: True
+  num_epochs: 20
+  epoch_milestones: []
+  lr: 2.0e-4
+  batch_size: 20
+  loss_weights:
+    reconstruction: [10, 10, 10, 10, 1]
+    reconstruction_deformed: 0
+    generator_gan: 1
+    discriminator_gan: 1
+  log_params:
+    log_freq_iter: 200
+    cpk_freq_epoch: 5
+
+reconstruction_params:
+  num_videos: 1000
+  format: '.gif'
+
+transfer_params:
+  num_pairs: 100
+  format: '.gif'
+  normalization_params:
+    movement_mult: False
+    move_location: True
+    adapt_variance: False
+
+prediction_params:
+  rnn_params:
+     num_features: 1024
+     num_layers: 1
+     dropout: 0
+  predict_variance: False
+  num_epochs: 1000
+  lr: 0.001
+  batch_size: 256
+  num_frames: 32
+  init_frames: 1
+  train_size: 500
+  format: '.gif'
+
+visualizer_params:
+  kp_size: 5
+  draw_border: False
+  colormap: 'gist_rainbow'
