@@ -54,7 +54,7 @@ model_params:
 train_params:
   detach_kp_generator: False
   detach_kp_discriminator: True
-  num_epochs: 15
+  num_epochs: 20
   epoch_milestones: []
   lr: 2.0e-4
   batch_size: 20
