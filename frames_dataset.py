@@ -27,7 +27,7 @@ def read_video(name, image_shape):
 
         video_array = video_array.reshape((-1,) + image_shape)
         video_array = np.moveaxis(video_array, 1, 2)
-    elif name.lower().endswith('.gif') or name.lower().endswith('.mp4'):
+    elif name.lower().endswith('.gif') or name.lower().endswith('.mp4') or name.lower().endswith('.mov'):
         video = np.array(mimread(name))
         if len(video.shape) == 3:
             video = np.array([gray2rgb(frame) for frame in video])
