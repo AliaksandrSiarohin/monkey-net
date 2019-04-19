@@ -1,6 +1,6 @@
 # Animating Arbitrary Objects via Deep Motion Transfer
 
-This repository contains the source code for the paper [Animating Arbitrary Objects via Deep Motion Transfer](https://arxiv.org/abs/1812.08861) by Aliaksandr Siarohin, Stéphane Lathuilière, [Sergey Tulyakov](http://stulyakov.com), [Elisa Ricci](http://elisaricci.eu/) and [Nicu Sebe](http://disi.unitn.it/~sebe/). We  call  the proposed deep framework Monkey-Net,  as it enables motion transfer by considering MOviNg KEYpoints. Check also the project [website](http://www.stulyakov.com/papers/monkey-net.html).
+This repository contains the source code for the CVPR oral paper [Animating Arbitrary Objects via Deep Motion Transfer](https://arxiv.org/abs/1812.08861) by Aliaksandr Siarohin, Stéphane Lathuilière, [Sergey Tulyakov](http://stulyakov.com), [Elisa Ricci](http://elisaricci.eu/) and [Nicu Sebe](http://disi.unitn.it/~sebe/). We  call  the proposed deep framework Monkey-Net,  as it enables motion transfer by considering MOviNg KEYpoints. Check also the project [website](http://www.stulyakov.com/papers/monkey-net.html).
 
 ## Examples of motion transfer
 
@@ -132,10 +132,11 @@ Training takes about 4 hours.
 Citation:
 
 ```
-@article{siarohin2018animating,
+@InProceedings{Siarohin_2019_CVPR,
+  author = {Siarohin, Aliaksandr and Sangineto, Enver and Lathuilière, Stéphane and Sebe, Nicu},
   title={Animating Arbitrary Objects via Deep Motion Transfer},
-  author={Siarohin, Aliaksandr and Lathuilière, Stéphane and Tulyakov, Sergey and Ricci, Elisa and Sebe, Nicu},
-  journal={arXiv:1812.08861},
-  year={2018}
+  booktitle = {The IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  month = {June},
+  year = {2019}
 }
 ```
