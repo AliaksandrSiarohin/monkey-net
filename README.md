@@ -35,7 +35,7 @@ There are several configuration (```config/dataset_name.yaml```) files one for e
 
 To run a demo, download a [checkpoint](https://yadi.sk/d/BX-hwuPEVm6iNw) and run the following command:
 ```
-python --config  config/moving-gif.yaml --driving_video sup-mat/driving_video.gif --source_image sup-mat/source_image.gif --checkpoint path/to/checkpoint
+python --config  config/moving-gif.yaml --driving_video sup-mat/driving.png --source_image sup-mat/source.png --checkpoint path/to/checkpoint
 ```
 The result will be stored in ```demo.gif```.
 
