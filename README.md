@@ -133,7 +133,7 @@ Citation:
 
 ```
 @InProceedings{Siarohin_2019_CVPR,
-  author = {Siarohin, Aliaksandr and Sangineto, Enver and Lathuilière, Stéphane and Sebe, Nicu},
+  author={Siarohin, Aliaksandr and Lathuilière, Stéphane and Tulyakov, Sergey and Ricci, Elisa and Sebe, Nicu},
   title={Animating Arbitrary Objects via Deep Motion Transfer},
   booktitle = {The IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
   month = {June},
