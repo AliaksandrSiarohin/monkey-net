@@ -43,7 +43,7 @@ The result will be stored in ```demo.gif```.
 
 To train a model on specific dataset run:
 ```
-CUDA_VISIBLE_DEVICES=0 python run.py config/dataset_name.yaml
+CUDA_VISIBLE_DEVICES=0 python run.py --config config/dataset_name.yaml
 ```
 The code will create a folder in the log directory (each run will create a time-stamped new directory).
 Checkpoints will be saved to this folder.
@@ -54,7 +54,7 @@ You can also check training data reconstructions in the ```train-vis``` subfolde
 
 To evaluate the reconstruction performance run:
 ```
-CUDA_VISIBLE_DEVICES=0 python run.py config/dataset_name.yaml --mode reconstruction --checkpoint path/to/checkpoint
+CUDA_VISIBLE_DEVICES=0 python run.py --config config/dataset_name.yaml --mode reconstruction --checkpoint path/to/checkpoint
 ```
 You will need to specify the path to the checkpoint,
 the ```reconstruction``` subfolder will be created in the checkpoint folder.
