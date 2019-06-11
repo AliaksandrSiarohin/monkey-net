@@ -35,7 +35,7 @@ There are several configuration (```config/dataset_name.yaml```) files one for e
 
 To run a demo, download a [checkpoint](https://yadi.sk/d/BX-hwuPEVm6iNw) and run the following command:
 ```
-python run.py --config  config/moving-gif.yaml --driving_video sup-mat/driving.png --source_image sup-mat/source.png --checkpoint path/to/checkpoint
+python demo.py --config  config/moving-gif.yaml --driving_video sup-mat/driving.png --source_image sup-mat/source.png --checkpoint path/to/checkpoint
 ```
 The result will be stored in ```demo.gif```.
 
@@ -64,7 +64,7 @@ The generated video will be stored to this folderenerated video there and in ```
 
 In order to perform motion transfer run:
 ```
-CUDA_VISIBLE_DEVICES=0 python run.py config/dataset_name.yaml --mode transfer --checkpoint path/to/checkpoint
+CUDA_VISIBLE_DEVICES=0 python run.py --config config/dataset_name.yaml --mode transfer --checkpoint path/to/checkpoint
 ```
 You will need to specify the path to the checkpoint,
 the ```transfer``` subfolder will be created in the same folder as the checkpoint.
@@ -89,7 +89,7 @@ The approximately aligned pairs of videos are given in the data folder. (e.g  ``
 
 In order to perform image-to-video translation run:
 ```
-CUDA_VISIBLE_DEVICES=0 python run.py config/dataset_name.yaml --mode prediction --checkpoint path/to/checkpoint
+CUDA_VISIBLE_DEVICES=0 python run.py --config config/dataset_name.yaml --mode prediction --checkpoint path/to/checkpoint
 ```
 The following steps will be performed:
 * Estimate the keypoints from the training set
