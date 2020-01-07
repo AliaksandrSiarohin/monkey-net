@@ -2,6 +2,9 @@
 
 This repository contains the source code for the CVPR oral paper [Animating Arbitrary Objects via Deep Motion Transfer](https://arxiv.org/abs/1812.08861) by Aliaksandr Siarohin, Stéphane Lathuilière, [Sergey Tulyakov](http://stulyakov.com), [Elisa Ricci](http://elisaricci.eu/) and [Nicu Sebe](http://disi.unitn.it/~sebe/). We  call  the proposed deep framework Monkey-Net,  as it enables motion transfer by considering MOviNg KEYpoints. Check also the project [website](http://www.stulyakov.com/papers/monkey-net.html).
 
+
+New version of the method can be found [here](https://github.com/AliaksandrSiarohin/first-order-model). 
+
 ## Examples of motion transfer
 
 The videos on the left show the driving videos. The first row on the right for each dataset shows the source images. The bottom row contains the animated sequences with motion transferred from the driving video and object taken from the source image. We trained a separate network for each task. Note that for each task the background, the object appearance are consistent in each generated video.
